@@ -53,7 +53,8 @@ let currentClassId = appState.classes[0]?.id || "class-10a1";
 let currentGroupFilter = "ALL";
 let currentMainTab = "classroom";
 let activeStudentModalId = null;
-let isSidebarCollapsed = false;
+let isSidebarCollapsed = true; // Mặc định toàn màn hình lưới học sinh ngay khi đăng nhập
+let isPointLineCollapsed = false;
 let revealedStudentIds = new Set(); // Cho phép hiển thị điểm riêng của từng học sinh khi đang bật chế độ Ẩn điểm chung
 
 // Biến phục vụ Quản lý Nhóm & Ranking
@@ -180,7 +181,7 @@ function resetDemoData() {
   appState.isPointsHidden = false;
   currentClassId = appState.classes[0].id;
   currentGroupFilter = "ALL";
-  isSidebarCollapsed = false;
+  isSidebarCollapsed = true;
   saveState();
   renderAll();
   showToast("🔄 Đã khôi phục dữ liệu mẫu ban đầu!", "indigo");
@@ -752,11 +753,14 @@ async function logoutTeacher() {
 function enterDemoMode() {
   isDemoMode = true;
   currentFirebaseUser = null;
-  appState = loadState(null);
+  appState = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  sanitizeCardFrames(appState);
   currentClassId = appState.classes[0]?.id || "class-10a1";
-  updateTeacherInfoUI("Cô Nguyễn Minh Anh (Demo)", "giaovien@demo.local", null);
+  updateTeacherInfoUI("Cô Nguyễn Minh Anh (Demo)", "demo@classjoy.vn", null);
+  isSidebarCollapsed = true;
+  updateSidebarExpansionUI();
   enterMainApp("teacher");
-  showToast("⚡ Đang dùng thử dữ liệu mẫu Offline (Demo)", "indigo");
+  showToast("👋 Đã vào chế độ Tài khoản Demo (Có sẵn học sinh & thẻ mẫu)!", "emerald");
 }
 
 function updateTeacherInfoUI(name, email, photoUrl) {
@@ -913,8 +917,60 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  document.addEventListener("click", () => closeAllDropdownMenus());
+  document.addEventListener("fullscreenchange", () => updateBrowserFullscreenUI());
   renderAll();
 });
+
+function toggleDropdownMenu(menuId, event) {
+  if (event) event.stopPropagation();
+  const menu = document.getElementById(menuId);
+  if (!menu) return;
+  const wasHidden = menu.classList.contains("hidden");
+  closeAllDropdownMenus();
+  if (wasHidden) menu.classList.remove("hidden");
+}
+
+function closeAllDropdownMenus() {
+  ["class-manage-menu", "fx-dropdown-menu"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add("hidden");
+  });
+}
+
+function toggleBrowserFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen().catch(() => {});
+  }
+}
+
+function updateBrowserFullscreenUI() {
+  const btn = document.getElementById("fullscreen-browser-btn");
+  if (!btn) return;
+  if (document.fullscreenElement) {
+    btn.innerHTML = "🗗 Thoát Toàn MH";
+    btn.className = "pop-btn pop-btn-yellow px-3 py-1.5 rounded-xl text-xs font-black";
+  } else {
+    btn.innerHTML = "⛶ Phóng to TV";
+    btn.className = "pop-btn pop-btn-white px-3 py-1.5 rounded-xl text-xs font-black";
+  }
+}
+
+function togglePointLineCollapse() {
+  isPointLineCollapsed = !isPointLineCollapsed;
+  const track = document.getElementById("classroom-point-line-track");
+  const btn = document.getElementById("toggle-pointline-btn");
+  if (!track || !btn) return;
+  if (isPointLineCollapsed) {
+    track.classList.add("hidden");
+    btn.textContent = "Mở rộng ▼";
+  } else {
+    track.classList.remove("hidden");
+    btn.textContent = "Thu gọn ▲";
+  }
+}
 
 function enterMainApp(mode, studentCode = "") {
   document.getElementById("landing-screen").classList.add("hidden");
@@ -934,11 +990,17 @@ function enterMainApp(mode, studentCode = "") {
     roleBadge.textContent = "Giáo viên";
     roleBadge.className =
       "text-[11px] font-black px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300";
+    isSidebarCollapsed = true;
+    updateSidebarExpansionUI();
     switchMainTab("classroom");
   }
 }
 
 function quickStudentLookup(code) {
+  if (!appState || !appState.classes || appState.classes.length === 0 || !findStudentByCode(code)) {
+    appState = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    sanitizeCardFrames(appState);
+  }
   enterMainApp("student", code);
 }
 
@@ -1031,12 +1093,12 @@ function updatePrivacyButtonUI() {
 
   if (appState.isPointsHidden) {
     btn.className =
-      "pop-btn pop-btn-yellow px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition";
+      "pop-btn pop-btn-yellow px-3 py-2 rounded-xl text-xs font-black transition";
     label.innerHTML = "🙈 Điểm đang Ẩn";
   } else {
     btn.className =
-      "pop-btn pop-btn-white px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition";
-    label.innerHTML = "👁️ Điểm đang Hiện";
+      "pop-btn pop-btn-white px-3 py-2 rounded-xl text-xs font-black transition";
+    label.innerHTML = "👁️ Hiện điểm";
   }
 }
 
@@ -1048,6 +1110,7 @@ function toggleSidebarExpansion() {
 function updateSidebarExpansionUI() {
   const mainCol = document.getElementById("classroom-main-col");
   const sideCol = document.getElementById("classroom-sidebar-col");
+  const btn = document.getElementById("toggle-sidebar-btn");
   const btnLabel = document.getElementById("sidebar-btn-label");
   const grid = document.getElementById("students-grid");
 
@@ -1056,13 +1119,15 @@ function updateSidebarExpansionUI() {
   if (isSidebarCollapsed) {
     mainCol.className = "lg:col-span-12 space-y-4 transition-all duration-300";
     sideCol.classList.add("hidden");
-    grid.className = "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4";
-    btnLabel.innerHTML = "📋 Mở tiện ích 10p";
+    grid.className = "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3.5 sm:gap-4";
+    btnLabel.innerHTML = "📋 Tiện ích 10p";
+    if (btn) btn.className = "pop-btn pop-btn-white px-3 py-2 rounded-xl text-xs font-black transition";
   } else {
     mainCol.className = "lg:col-span-8 space-y-4 transition-all duration-300";
     sideCol.classList.remove("hidden");
     grid.className = "grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4";
-    btnLabel.innerHTML = "📺 Toàn màn hình";
+    btnLabel.innerHTML = "📺 Thu gọn Tiện ích";
+    if (btn) btn.className = "pop-btn pop-btn-yellow px-3 py-2 rounded-xl text-xs font-black transition";
   }
 }
 
@@ -1117,39 +1182,10 @@ function renderClassroom() {
   const statsBar = document.getElementById("class-stats-bar");
   if (statsBar) {
     statsBar.innerHTML = `
-      <div class="bg-white rounded-2xl p-3 border-2 border-slate-900 shadow-[0_3px_0_#1e293b] flex items-center gap-3">
-        <div class="w-10 h-10 rounded-2xl bg-sky-100 border-2 border-slate-900 text-sky-900 flex items-center justify-center text-xl shadow-[0_2px_0_#1e293b]">👥</div>
-        <div>
-          <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Sĩ số lớp</div>
-          <div class="text-lg font-black text-slate-900">${cls.students.length} <span class="text-xs font-bold text-slate-500">học sinh</span></div>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-2xl p-3 border-2 border-slate-900 shadow-[0_3px_0_#1e293b] flex items-center gap-3">
-        <div class="w-10 h-10 rounded-2xl bg-amber-100 border-2 border-slate-900 text-amber-900 flex items-center justify-center text-xl shadow-[0_2px_0_#1e293b]">⭐</div>
-        <div>
-          <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Tổng điểm lớp</div>
-          <div class="text-lg font-black ${appState.isPointsHidden ? "text-slate-500" : "text-emerald-600"}">
-            ${appState.isPointsHidden ? "⭐ Đang ẩn" : `+${totalPoints}đ`}
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-2xl p-3 border-2 border-slate-900 shadow-[0_3px_0_#1e293b] flex items-center gap-3">
-        <div class="w-10 h-10 rounded-2xl bg-amber-300 border-2 border-slate-900 text-slate-900 flex items-center justify-center text-xl shadow-[0_2px_0_#1e293b]">⚡</div>
-        <div>
-          <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Power Card</div>
-          <div class="text-lg font-black text-amber-600">${activePowerCards} <span class="text-xs font-bold text-slate-500">thẻ chờ dùng</span></div>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-2xl p-3 border-2 border-slate-900 shadow-[0_3px_0_#1e293b] flex items-center gap-3">
-        <div class="w-10 h-10 rounded-2xl bg-violet-100 border-2 border-slate-900 text-violet-900 flex items-center justify-center text-xl shadow-[0_2px_0_#1e293b]">🎯</div>
-        <div>
-          <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Challenge Card</div>
-          <div class="text-lg font-black text-slate-800">${activeChallengeCards} <span class="text-xs font-bold text-violet-600">đang nhận</span> • ${usedCardsCount} <span class="text-xs font-bold text-slate-400">xong</span></div>
-        </div>
-      </div>
+      <span class="px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-300 text-xs font-black text-slate-700">👥 ${cls.students.length} HS</span>
+      <span class="px-2.5 py-1 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-black text-emerald-700">⭐ ${appState.isPointsHidden ? "Đang ẩn" : `+${totalPoints}đ`}</span>
+      <span class="px-2.5 py-1 rounded-xl bg-amber-50 border border-amber-200 text-xs font-black text-amber-800">⚡ ${activePowerCards} Power</span>
+      <span class="px-2.5 py-1 rounded-xl bg-violet-50 border border-violet-200 text-xs font-black text-violet-800">🎯 ${activeChallengeCards} Challenge</span>
     `;
   }
 
@@ -3387,13 +3423,28 @@ function deleteCardTemplate(cardId, type) {
 // ----------------------------------------------------------------------------
 function renderPortalQuickCodes() {
   const container = document.getElementById("portal-quick-codes");
+  const wrapper = document.getElementById("portal-quick-codes-wrapper");
   if (!container) return;
+
+  // Chỉ hiện danh sách chọn nhanh nếu Giáo viên đang đăng nhập thực tế hoặc đang ở chế độ Demo
+  if (!currentFirebaseUser && !isDemoMode) {
+    if (wrapper) wrapper.classList.add("hidden");
+    container.innerHTML = "";
+    return;
+  }
 
   const allStudents = [];
   appState.classes.forEach((c) => {
     c.students.forEach((s) => allStudents.push({ ...s, className: c.name }));
   });
 
+  if (allStudents.length === 0) {
+    if (wrapper) wrapper.classList.add("hidden");
+    container.innerHTML = "";
+    return;
+  }
+
+  if (wrapper) wrapper.classList.remove("hidden");
   container.innerHTML = allStudents
     .map(
       (s) => `
