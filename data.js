@@ -1,28 +1,28 @@
 const AVAILABLE_CARD_FRAMES = [
-  "Card/1.jpg",
-  "Card/2.jpg",
-  "Card/3.jpg",
-  "Card/4.jpg",
-  "Card/5.jpg",
-  "Card/6.jpg",
-  "Card/7.jpg",
-  "Card/8.jpg",
-  "Card/9.jpg",
-  "Card/10.jpg",
-  "Card/11.jpg",
-  "Card/12.jpg",
-  "Card/13.jpg",
-  "Card/14.jpg",
-  "Card/15.jpg",
-  "Card/16.jpg",
-  "Card/17.jpg",
-  "Card/18.jpg",
-  "Card/19.jpg",
-  "Card/20.jpg",
-  "Card/21.jpg",
-  "Card/22.jpg",
-  "Card/23.jpg",
-  "Card/24.jpg"
+  "1.jpg",
+  "2.jpg",
+  "3.jpg",
+  "4.jpg",
+  "5.jpg",
+  "6.jpg",
+  "7.jpg",
+  "8.jpg",
+  "9.jpg",
+  "10.jpg",
+  "11.jpg",
+  "12.jpg",
+  "13.jpg",
+  "14.jpg",
+  "15.jpg",
+  "16.jpg",
+  "17.jpg",
+  "18.jpg",
+  "19.jpg",
+  "20.jpg",
+  "21.jpg",
+  "22.jpg",
+  "23.jpg",
+  "24.jpg"
 ];
 
 // ============================================================================
@@ -74,7 +74,7 @@ const DEFAULT_DATA = {
   powerCards: [
     {
       id: "pc-1",
-      cardFrame: "Card/1.jpg",
+      cardFrame: "1.jpg",
       code: "PWR-01",
       title: "Hoãn kiểm tra miệng",
       rarity: "SSR",
@@ -87,7 +87,7 @@ const DEFAULT_DATA = {
     },
     {
       id: "pc-2",
-      cardFrame: "Card/2.jpg",
+      cardFrame: "2.jpg",
       code: "PWR-02",
       title: "Hoãn bài tập về nhà hôm nay",
       rarity: "SR",
@@ -100,7 +100,7 @@ const DEFAULT_DATA = {
     },
     {
       id: "pc-3",
-      cardFrame: "Card/3.jpg",
+      cardFrame: "3.jpg",
       code: "PWR-03",
       title: "Triệu hồi đồng đội & Quà KitKat",
       rarity: "UR",
@@ -117,7 +117,7 @@ const DEFAULT_DATA = {
   penaltyCards: [
     {
       id: "pen-1",
-      cardFrame: "Card/4.jpg",
+      cardFrame: "4.jpg",
       code: "CHL-01",
       title: "Thử thách Truth or Dare",
       icon: "🎭",
@@ -129,7 +129,7 @@ const DEFAULT_DATA = {
     },
     {
       id: "pen-2",
-      cardFrame: "Card/5.jpg",
+      cardFrame: "5.jpg",
       code: "CHL-02",
       title: "Thử thách Tập trung: Trừ 3 điểm nhắc nhở",
       icon: "🎯",
@@ -141,7 +141,7 @@ const DEFAULT_DATA = {
     },
     {
       id: "pen-3",
-      cardFrame: "Card/6.jpg",
+      cardFrame: "6.jpg",
       code: "CHL-03",
       title: "Thử thách Đồng đội: Biệt đội Sạch Đẹp",
       icon: "🧹",

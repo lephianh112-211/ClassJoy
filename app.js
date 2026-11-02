@@ -73,6 +73,35 @@ let audioCtx = null;
 // ----------------------------------------------------------------------------
 // 1. KHỞI TẠO & LƯU TRỮ DỮ LIỆU
 // ----------------------------------------------------------------------------
+function resolveFrameUrl(path) {
+  if (!path) return "1.jpg";
+  const clean = String(path).replace(/^Card\//i, "");
+  return clean || "1.jpg";
+}
+
+function sanitizeCardFrames(state) {
+  if (!state) return;
+  if (Array.isArray(state.powerCards)) {
+    state.powerCards.forEach((c) => { if (c.cardFrame) c.cardFrame = resolveFrameUrl(c.cardFrame); });
+  }
+  if (Array.isArray(state.penaltyCards)) {
+    state.penaltyCards.forEach((c) => { if (c.cardFrame) c.cardFrame = resolveFrameUrl(c.cardFrame); });
+  }
+  if (Array.isArray(state.classes)) {
+    state.classes.forEach((cls) => {
+      if (Array.isArray(cls.students)) {
+        cls.students.forEach((st) => {
+          if (Array.isArray(st.ownedCards)) {
+            st.ownedCards.forEach((c) => {
+              if (c.cardFrame) c.cardFrame = resolveFrameUrl(c.cardFrame);
+            });
+          }
+        });
+      }
+    });
+  }
+}
+
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -81,12 +110,15 @@ function loadState() {
       if (!parsed.pointLineMilestones) {
         parsed.pointLineMilestones = DEFAULT_DATA.pointLineMilestones;
       }
+      sanitizeCardFrames(parsed);
       return parsed;
     }
   } catch (err) {
     console.warn("Không thể đọc LocalStorage, dùng dữ liệu mặc định:", err);
   }
-  return JSON.parse(JSON.stringify(DEFAULT_DATA));
+  const defaultState = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  sanitizeCardFrames(defaultState);
+  return defaultState;
 }
 
 function saveState() {
@@ -719,9 +751,24 @@ async function loadTeacherDataFromFirestore(user) {
     const snap = await docRef.get();
     if (snap.exists && snap.data()?.appState) {
       appState = snap.data().appState;
+      sanitizeCardFrames(appState);
     } else {
-      // Khởi tạo dữ liệu mẫu ban đầu lên Firestore cho tài khoản giáo viên mới
-      appState = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      // Khởi tạo lớp học mới tinh (trống học sinh) cho tài khoản giáo viên mới
+      const newInitialState = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      newInitialState.classes = [
+        {
+          id: "class-my-1",
+          name: "Lớp học của tôi",
+          grade: "Khối 10",
+          room: "Phòng học",
+          groupsList: ["Nhóm 1", "Nhóm 2", "Nhóm 3", "Nhóm 4"],
+          students: []
+        }
+      ];
+      newInitialState.speechQueue = [];
+      newInitialState.teacherAccount.name = user.displayName || "Giáo viên";
+      sanitizeCardFrames(newInitialState);
+      appState = newInitialState;
       await docRef.set({
         appState,
         teacherEmail: user.email,
@@ -729,13 +776,25 @@ async function loadTeacherDataFromFirestore(user) {
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
     }
-    currentClassId = appState.classes[0]?.id || "class-10a1";
+    currentClassId = appState.classes[0]?.id || "class-my-1";
     saveState();
     renderAll();
   } catch (err) {
     console.error("Lỗi tải Firestore:", err);
     showToast("⚠️ Không thể tải dữ liệu đám mây, dùng dữ liệu lưu cục bộ.", "amber");
   }
+}
+
+function clearClassStudents() {
+  const cls = getCurrentClass();
+  if (!cls) return;
+  if (!confirm(`Bạn có chắc muốn xóa toàn bộ học sinh trong ${cls.name} để bắt đầu tạo danh sách học sinh thật không?`)) return;
+  cls.students = [];
+  appState.speechQueue = [];
+  revealedStudentIds.clear();
+  saveState();
+  renderAll();
+  showToast(`🧹 Đã dọn sạch học sinh mẫu của ${cls.name}!`, "emerald");
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -2763,7 +2822,7 @@ function openRandomCardModal(mode = "power", targetType = "student", preselected
 function renderVisualArtCard(card, state = "unused", options = {}) {
   if (!card) return "";
   const isUsed = state === "used";
-  const frameUrl = card.cardFrame || "Card/1.jpg";
+  const cleanFrame = resolveFrameUrl(card.cardFrame || "1.jpg");
   const isPower = card.type === "power" || (card.id && card.id.startsWith("pc")) || options.type === "power";
   const maxWidth = options.maxWidth || "230px";
   const showStamp = isUsed;
@@ -2771,7 +2830,7 @@ function renderVisualArtCard(card, state = "unused", options = {}) {
   
   return `
     <div class="custom-art-card ${isUsed ? 'opacity-70 grayscale-[0.25]' : ''}" 
-         style="background-image: url('${frameUrl}'); max-width: ${maxWidth};">
+         style="background-image: url('${cleanFrame}'), url('Card/${cleanFrame}'); max-width: ${maxWidth};">
       
       <!-- Top header bar: Mã code (Đã bỏ phần phân loại Cá nhân / Nhóm / Đặc quyền) -->
       <div class="flex items-center justify-between gap-1 z-10 w-full">
@@ -3053,22 +3112,20 @@ function renderSingleDeckCardHtml(card, type) {
 function populateCardFramePicker() {
   const container = document.getElementById("card-frame-picker");
   if (!container) return;
-  const currentFrame = document.getElementById("edit-card-frame")?.value || "Card/1.jpg";
-  const frames = typeof AVAILABLE_CARD_FRAMES !== "undefined" ? AVAILABLE_CARD_FRAMES : [
-    "Card/1.jpg","Card/2.jpg","Card/3.jpg","Card/4.jpg","Card/5.jpg","Card/6.jpg",
-    "Card/7.jpg","Card/8.jpg","Card/9.jpg","Card/10.jpg","Card/11.jpg","Card/12.jpg",
-    "Card/13.jpg","Card/14.jpg","Card/15.jpg","Card/16.jpg","Card/17.jpg","Card/18.jpg",
-    "Card/19.jpg","Card/20.jpg","Card/21.jpg","Card/22.jpg","Card/23.jpg","Card/24.jpg"
-  ];
+  const currentFrame = resolveFrameUrl(document.getElementById("edit-card-frame")?.value || "1.jpg");
+  const rawFrames = typeof AVAILABLE_CARD_FRAMES !== "undefined" && AVAILABLE_CARD_FRAMES.length > 0
+    ? AVAILABLE_CARD_FRAMES
+    : Array.from({ length: 24 }, (_, i) => `${i + 1}.jpg`);
+  const frames = rawFrames.map((f) => resolveFrameUrl(f));
   
   container.innerHTML = frames
-    .map((frameUrl, idx) => {
-      const isSelected = frameUrl === currentFrame;
+    .map((frameFile, idx) => {
+      const isSelected = frameFile === currentFrame;
       return `
         <button type="button" 
-          onclick="selectCardFrame('${frameUrl}')" 
+          onclick="selectCardFrame('${frameFile}')" 
           class="frame-thumbnail-btn ${isSelected ? 'is-selected' : ''}" 
-          style="background-image: url('${frameUrl}');" 
+          style="background-image: url('${frameFile}'), url('Card/${frameFile}');" 
           title="Phôi thẻ ${idx + 1}">
           <span class="sr-only">Mẫu ${idx + 1}</span>
         </button>
@@ -3078,12 +3135,13 @@ function populateCardFramePicker() {
 }
 
 function selectCardFrame(frameUrl) {
+  const clean = resolveFrameUrl(frameUrl);
   const input = document.getElementById("edit-card-frame");
-  if (input) input.value = frameUrl;
+  if (input) input.value = clean;
 
   const buttons = document.querySelectorAll(".frame-thumbnail-btn");
   buttons.forEach((btn) => {
-    if (btn.style.backgroundImage && btn.style.backgroundImage.includes(frameUrl)) {
+    if (btn.style.backgroundImage && btn.style.backgroundImage.includes(clean)) {
       btn.classList.add("is-selected");
     } else {
       btn.classList.remove("is-selected");
@@ -3103,7 +3161,7 @@ function updateCardEditorPreview() {
   const icon = document.getElementById("edit-card-icon")?.value.trim() || (isPower ? "⚡" : "🎯");
   const code = document.getElementById("edit-card-code")?.value.trim().toUpperCase() || (isPower ? "PWR-01" : "CHL-01");
   const desc = document.getElementById("edit-card-desc")?.value.trim() || "Nội dung quyền năng hoặc thử thách của thẻ do giáo viên soạn thảo sẽ hiển thị ngay tại đây...";
-  const frame = document.getElementById("edit-card-frame")?.value || (isPower ? "Card/1.jpg" : "Card/4.jpg");
+  const frame = resolveFrameUrl(document.getElementById("edit-card-frame")?.value || (isPower ? "1.jpg" : "4.jpg"));
 
   const previewCard = {
     id: "preview",
@@ -3133,10 +3191,11 @@ function openCreateCardModal(type) {
   document.getElementById("edit-card-desc").value = "";
 
   // Chọn sẵn ngẫu nhiên 1 trong 24 phôi thẻ khi mở tạo thẻ mới
-  const frames = typeof AVAILABLE_CARD_FRAMES !== "undefined" && AVAILABLE_CARD_FRAMES.length > 0
+  const rawFrames = typeof AVAILABLE_CARD_FRAMES !== "undefined" && AVAILABLE_CARD_FRAMES.length > 0
     ? AVAILABLE_CARD_FRAMES
-    : ["Card/1.jpg"];
-  document.getElementById("edit-card-frame").value = frames[Math.floor(Math.random() * frames.length)];
+    : ["1.jpg"];
+  const randomFrame = resolveFrameUrl(rawFrames[Math.floor(Math.random() * rawFrames.length)]);
+  document.getElementById("edit-card-frame").value = randomFrame;
 
   populateCardFramePicker();
   updateCardEditorPreview();
@@ -3155,7 +3214,8 @@ function openEditCardModal(cardId, type) {
   document.getElementById("edit-card-icon").value = card.icon;
   document.getElementById("edit-card-code").value = card.code;
   document.getElementById("edit-card-desc").value = card.description;
-  document.getElementById("edit-card-frame").value = card.cardFrame || (isPower ? "Card/1.jpg" : "Card/4.jpg");
+  const rawFrame = card.cardFrame || (isPower ? "1.jpg" : "4.jpg");
+  document.getElementById("edit-card-frame").value = resolveFrameUrl(rawFrame);
 
   populateCardFramePicker();
   updateCardEditorPreview();
@@ -3170,7 +3230,7 @@ function handleSaveCardTemplate(e) {
   const icon = document.getElementById("edit-card-icon").value.trim() || "🃏";
   const code = document.getElementById("edit-card-code").value.trim().toUpperCase();
   const description = document.getElementById("edit-card-desc").value.trim();
-  const cardFrame = document.getElementById("edit-card-frame").value.trim() || "Card/1.jpg";
+  const cardFrame = resolveFrameUrl(document.getElementById("edit-card-frame").value.trim() || "1.jpg");
 
   const targetDeck = type === "power" ? appState.powerCards : appState.penaltyCards;
 
@@ -3883,13 +3943,8 @@ function parseCardImportText(text, type) {
 
   const isPower = type === "power";
   const frames = (typeof AVAILABLE_CARD_FRAMES !== "undefined" && AVAILABLE_CARD_FRAMES.length > 0)
-    ? AVAILABLE_CARD_FRAMES
-    : [
-        "Card/1.jpg", "Card/2.jpg", "Card/3.jpg", "Card/4.jpg", "Card/5.jpg", "Card/6.jpg",
-        "Card/7.jpg", "Card/8.jpg", "Card/9.jpg", "Card/10.jpg", "Card/11.jpg", "Card/12.jpg",
-        "Card/13.jpg", "Card/14.jpg", "Card/15.jpg", "Card/16.jpg", "Card/17.jpg", "Card/18.jpg",
-        "Card/19.jpg", "Card/20.jpg", "Card/21.jpg", "Card/22.jpg", "Card/23.jpg", "Card/24.jpg"
-      ];
+    ? AVAILABLE_CARD_FRAMES.map((f) => resolveFrameUrl(f))
+    : Array.from({ length: 24 }, (_, i) => `${i + 1}.jpg`);
 
   const powerIcons = ["⚡", "🛡️", "🏖️", "🍫", "🌟", "👑", "🚀", "💡", "💎", "🎯", "🍀", "🔥"];
   const penaltyIcons = ["🎭", "🎯", "🧹", "⏰", "🙋", "🎤", "🧘", "🎲", "🧩", "⚽", "🎨", "🧗"];
