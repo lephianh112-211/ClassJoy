@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClassJoy - Lớp Học Vui Nhộn & Thẻ Quyền Lực (Power Cards & Challenge Cards)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="min-h-screen flex flex-col bg-[#fdfbf7] text-slate-800 antialiased">
+
+  <!-- ========================================================================
+       FULLSCREEN ATMOSPHERE FX OVERLAY (VỖ TAY, PHÁO HOA, MƯA, NẮNG)
+       ======================================================================== -->
+  <div id="fx-overlay" class="hidden"></div>
+
+  <!-- ========================================================================
+       1. MÀN HÌNH CHỦ (LANDING SCREEN - CLASSROOM POP THEME)
+       ======================================================================== -->
+  <div id="landing-screen" class="min-h-screen flex flex-col justify-between bg-[#fdfbf7] p-4 sm:p-8">
+    
+    <!-- Header lớp học -->
+    <header class="max-w-6xl w-full mx-auto flex flex-wrap items-center justify-between gap-4 py-3">
+      <div class="flex items-center gap-3">
+        <div class="w-13 h-13 rounded-2xl bg-amber-400 border-2 border-slate-900 flex items-center justify-center text-3xl shadow-[0_4px_0_#1e293b]">
+          ⚡
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">ClassJoy</h1>
+            <span class="text-xs font-black bg-emerald-100 text-emerald-800 border-2 border-emerald-300 px-3 py-0.5 rounded-full">
+              Lớp Học Vui Nhộn
+            </span>
+          </div>
+          <p class="text-xs font-bold text-slate-500">Quản lý thi đua học sinh • Power Cards • Challenge Cards • Chia Nhóm & Ranking</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-black bg-white border-2 border-slate-300 px-3.5 py-1.5 rounded-xl shadow-[0_2px_0_#cbd5e1] text-slate-700">
+          🏫 Niên khóa 2026 - 2027
+        </span>
+      </div>
+    </header>
+
+    <!-- Khối trung tâm: 2 phân khu Giáo viên & Học sinh -->
+    <main class="max-w-6xl w-full mx-auto my-auto py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+      
+      <!-- Cột trái: Đăng nhập Giáo viên -->
+      <div class="lg:col-span-7 bg-white rounded-3xl p-7 sm:p-9 border-2 border-slate-900 shadow-[0_8px_0_#1e293b] flex flex-col justify-between">
+        <div>
+          <div class="inline-flex items-center gap-2 bg-indigo-100 border-2 border-indigo-300 text-indigo-900 text-xs font-black px-3.5 py-1.5 rounded-full mb-4">
+            👩‍🏫 BÀN LÀM VIỆC CỦA GIÁO VIÊN
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 mb-2">Đăng nhập vào Lớp học</h2>
+          <p class="text-sm font-semibold text-slate-600 mb-5 leading-relaxed">
+            Dữ liệu được lưu trữ và đồng bộ đám mây trực tiếp qua Firebase Firestore. Học sinh xem điểm trên điện thoại nhận kết quả tức thì không cần tải lại trang.
+          </p>
+
+          <!-- 1. ĐĂNG NHẬP NHANH VỚI GOOGLE -->
+          <button type="button" onclick="loginWithGoogle()"
+            class="w-full py-3.5 px-5 rounded-2xl border-2 border-slate-900 bg-white hover:bg-slate-50 text-slate-900 font-black text-sm flex items-center justify-center gap-3 shadow-[0_4px_0_#1e293b] active:translate-y-1 transition mb-4">
+            <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+            <span>Đăng nhập nhanh với Google (Khuyên dùng)</span>
+          </button>
+
+          <!-- Divider -->
+          <div class="relative flex items-center justify-center my-4">
+            <div class="border-t-2 border-slate-200 w-full"></div>
+            <span class="bg-white px-3 text-[11px] font-black text-slate-400 uppercase tracking-wider relative z-10">hoặc dùng Email & Mật khẩu</span>
+          </div>
+
+          <!-- Tab chuyển đổi Đăng nhập / Đăng ký -->
+          <div class="flex gap-1.5 bg-slate-100 p-1 rounded-xl mb-4 border border-slate-200">
+            <button type="button" id="auth-tab-login" onclick="setAuthMode('login')"
+              class="flex-1 py-1.5 px-3 rounded-lg text-xs font-black transition bg-white text-slate-900 border border-slate-900 shadow-xs">
+              Đăng nhập
+            </button>
+            <button type="button" id="auth-tab-register" onclick="setAuthMode('register')"
+              class="flex-1 py-1.5 px-3 rounded-lg text-xs font-black transition text-slate-600 hover:text-slate-900">
+              Đăng ký tài khoản mới
+            </button>
+          </div>
+
+          <form id="teacher-auth-form" onsubmit="handleTeacherAuthSubmit(event)" class="space-y-3">
+            <div id="auth-name-field" class="hidden">
+              <label class="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1">Họ và tên Giáo viên</label>
+              <input id="auth-name" type="text"
+                class="w-full px-4 py-2.5 rounded-2xl border-2 border-slate-300 focus:border-slate-900 font-bold text-slate-800 outline-none transition bg-slate-50 focus:bg-white text-sm"
+                placeholder="VD: Cô Nguyễn Minh Anh" />
+            </div>
+            <div>
+              <label class="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1">Email giáo viên</label>
+              <input id="auth-email" type="email" required
+                class="w-full px-4 py-2.5 rounded-2xl border-2 border-slate-300 focus:border-slate-900 font-bold text-slate-800 outline-none transition bg-slate-50 focus:bg-white text-sm"
+                placeholder="VD: giaovien@truong.edu.vn" />
+            </div>
+            <div>
+              <label class="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1">Mật khẩu</label>
+              <input id="auth-password" type="password" required minlength="6"
+                class="w-full px-4 py-2.5 rounded-2xl border-2 border-slate-300 focus:border-slate-900 font-bold text-slate-800 outline-none transition bg-slate-50 focus:bg-white text-sm"
+                placeholder="Tối thiểu 6 ký tự..." />
+            </div>
+            <div id="login-error" class="hidden text-xs font-black text-rose-700 bg-rose-100 border-2 border-rose-300 px-3.5 py-2.5 rounded-xl"></div>
+            
+            <button type="submit" id="auth-submit-btn"
+              class="pop-btn pop-btn-yellow w-full py-3.5 px-6 rounded-2xl text-sm font-black tracking-wide mt-1">
+              <span>🚀 Đăng Nhập Vào Lớp Học</span>
+            </button>
+          </form>
+        </div>
+
+        <div class="mt-5 pt-4 border-t-2 border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-slate-500">
+          <button type="button" onclick="enterDemoMode()" class="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-300 hover:border-slate-900 font-black text-slate-700 text-xs transition">
+            ⚡ Dùng thử nhanh (Offline Demo)
+          </button>
+          <span id="cloud-sync-status-landing" class="text-emerald-700 font-black">● Firebase Đã Sẵn Sàng</span>
+        </div>
+      </div>
+
+      <!-- Cột phải: Cổng Học sinh nhập Mã Code -->
+      <div class="lg:col-span-5 bg-amber-50/80 rounded-3xl p-7 sm:p-9 border-2 border-amber-300 shadow-[0_8px_0_#f59e0b] flex flex-col justify-between">
+        <div>
+          <div class="inline-flex items-center gap-2 bg-amber-200 border-2 border-amber-400 text-amber-950 text-xs font-black px-3.5 py-1.5 rounded-full mb-4">
+            🎒 GÓC CỦA HỌC SINH
+          </div>
+          <h2 class="text-2xl font-black text-slate-900 mb-2">Tra Cứu Mã Code Cá Nhân</h2>
+          <p class="text-sm font-semibold text-amber-950/80 mb-6 leading-relaxed">
+            Nhập mã số riêng của em để kiểm tra tổng điểm thưởng, xem tiến trình xem mình <strong>đã đạt đến mốc điểm nào</strong> trên Point Line để rút <strong>Power Card</strong>, và xem các <strong>Challenge Card</strong> đang có.
+          </p>
+
+          <form id="landing-student-form" class="space-y-4">
+            <div>
+              <label class="block text-xs font-black uppercase tracking-wider text-amber-950 mb-1.5">Mã Code Học Sinh</label>
+              <input id="landing-student-code" type="text" required
+                class="w-full px-4 py-3.5 rounded-2xl border-2 border-slate-900 bg-white text-slate-900 font-black text-xl uppercase tracking-wider placeholder:text-slate-400 placeholder:font-normal placeholder:text-sm outline-none focus:ring-4 focus:ring-amber-300 shadow-[0_3px_0_#1e293b]"
+                placeholder="VD: HS01, HS02, HS03..." />
+            </div>
+            <button type="submit"
+              class="pop-btn pop-btn-blue w-full py-4 px-6 rounded-2xl text-base font-black tracking-wide">
+              <span>🔍 Xem Tiến Trình & Túi Thẻ Của Em</span>
+            </button>
+          </form>
+        </div>
+
+        <div class="mt-6 pt-5 border-t-2 border-amber-200/80">
+          <p class="text-xs font-black text-amber-950 mb-2.5">Bấm thử nhanh mã học sinh mẫu:</p>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="quickStudentLookup('HS01')" class="px-3 py-1.5 rounded-xl bg-white border-2 border-slate-900 text-slate-900 text-xs font-black shadow-[0_2px_0_#1e293b] hover:bg-amber-100 transition">HS01 (24đ • Đạt mốc 20)</button>
+            <button type="button" onclick="quickStudentLookup('HS02')" class="px-3 py-1.5 rounded-xl bg-white border-2 border-slate-900 text-slate-900 text-xs font-black shadow-[0_2px_0_#1e293b] hover:bg-amber-100 transition">HS02 (32đ • Đạt mốc 30)</button>
+            <button type="button" onclick="quickStudentLookup('HS03')" class="px-3 py-1.5 rounded-xl bg-white border-2 border-slate-900 text-slate-900 text-xs font-black shadow-[0_2px_0_#1e293b] hover:bg-amber-100 transition">HS03 (9đ • Có Challenge Card)</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="max-w-6xl w-full mx-auto text-center text-xs font-bold text-slate-400 py-3">
+      ClassJoy • Nền tảng lớp học thân thiện • Power Cards & Challenge Cards
+    </footer>
+  </div>
+
+  <!-- ========================================================================
+       2. GIAO DIỆN CHÍNH (MAIN APP WORKSPACE)
+       ======================================================================== -->
+  <div id="main-app" class="hidden flex-1 flex flex-col min-h-screen">
+    
+    <!-- Top Bar điều hướng -->
+    <header class="bg-white border-b-2 border-slate-900 sticky top-0 z-30 shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+        
+        <!-- Logo & Thông tin giáo viên -->
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl bg-amber-400 border-2 border-slate-900 flex items-center justify-center text-2xl font-black shadow-[0_3px_0_#1e293b]">
+            ⚡
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-black text-xl text-slate-900 tracking-tight">ClassJoy</span>
+              <span id="role-badge" class="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">Giáo viên</span>
+              <span id="cloud-badge" class="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300">☁️ Firebase Đã Kết Nối</span>
+            </div>
+            <p id="teacher-info-bar" class="text-xs font-bold text-slate-500">Cô Nguyễn Minh Anh • THPT Chu Văn An</p>
+          </div>
+        </div>
+
+        <!-- Các Tab điều hướng chính (6 Tab đầy đủ) -->
+        <nav id="teacher-nav-tabs" class="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border-2 border-slate-200">
+          <button onclick="switchMainTab('classroom')" id="tab-btn-classroom"
+            class="tab-nav-btn px-3.5 py-2 rounded-xl text-xs font-black transition bg-white text-slate-900 border-2 border-slate-900 shadow-[0_2px_0_#1e293b]">
+            🏫 Lớp Học
+          </button>
+          <button onclick="switchMainTab('groups')" id="tab-btn-groups"
+            class="tab-nav-btn px-3.5 py-2 rounded-xl text-xs font-black transition text-slate-600 hover:text-slate-900">
+            👥 Chia Nhóm & Thưởng Nhóm
+          </button>
+          <button onclick="switchMainTab('ranking')" id="tab-btn-ranking"
+            class="tab-nav-btn px-3.5 py-2 rounded-xl text-xs font-black transition text-slate-600 hover:text-slate-900">
+            🏆 Thống Kê & Ranking
+          </button>
+          <button onclick="switchMainTab('power-cards')" id="tab-btn-power-cards"
+            class="tab-nav-btn px-3.5 py-2 rounded-xl text-xs font-black transition text-slate-600 hover:text-slate-900">
+            🃏 Power Card (<span id="nav-power-count">3</span>)
+          </button>
+          <button onclick="switchMainTab('penalty-cards')" id="tab-btn-penalty-cards"
+            class="tab-nav-btn px-3.5 py-2 rounded-xl text-xs font-black transition text-slate-600 hover:text-slate-900">
+            🎯 Challenge Card (<span id="nav-penalty-count">3</span>)
+          </button>
+          <button onclick="switchMainTab('student-portal')" id="tab-btn-student-portal"
+            class="tab-nav-btn px-3.5 py-2 rounded-xl text-xs font-black transition text-slate-600 hover:text-slate-900">
+            🎒 Cổng Học Sinh
+          </button>
+        </nav>
+
+        <!-- Thao tác hệ thống -->
+        <div class="flex items-center gap-2">
+          <button onclick="resetDemoData()" title="Khôi phục dữ liệu mẫu ban đầu"
+            class="pop-btn pop-btn-white px-3 py-2 rounded-xl text-xs font-bold">
+            🔄 Reset mẫu
+          </button>
+          <button onclick="logoutTeacher()"
+            class="pop-btn pop-btn-dark px-3.5 py-2 rounded-xl text-xs font-black">
+            🚪 Đăng xuất
+          </button>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- ======================================================================
+         TAB 1: LỚP HỌC & ĐIỂM THƯỞNG (ĐỐI CHIẾU POINT LINE & CHALLENGE CARDS)
+         ====================================================================== -->
+    <section id="tab-classroom" class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 space-y-4">
+      
+      <!-- Thanh công cụ lớp học & Nút tương tác -->
+      <div class="bg-white rounded-3xl p-4 sm:p-5 border-2 border-slate-900 shadow-[0_6px_0_#1e293b] flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4">
+        
+        <!-- Chọn lớp học -->
+        <div class="flex flex-wrap items-center gap-2.5">
+          <select id="class-selector" onchange="handleClassChange(this.value)"
+            class="px-4 py-2.5 rounded-2xl bg-amber-50 hover:bg-amber-100 font-black text-slate-900 text-sm outline-none cursor-pointer border-2 border-slate-900 shadow-[0_2px_0_#1e293b]">
+          </select>
+          <button onclick="openAddClassModal()"
+            class="pop-btn pop-btn-white px-3 py-2 rounded-xl text-xs font-black">
+            + Lớp
+          </button>
+          <button onclick="openAddStudentModal()"
+            class="pop-btn pop-btn-green px-3 py-2 rounded-xl text-xs font-black">
+            + Học sinh
+          </button>
+          <button onclick="openBulkImportStudentsModal()"
+            class="pop-btn pop-btn-yellow px-3 py-2 rounded-xl text-xs font-black"
+            title="Nhập danh sách học sinh hàng loạt từ danh sách hoặc Excel">
+            📥 Nhập DS Học Sinh
+          </button>
+        </div>
+
+        <!-- Bộ nút công cụ tương tác & Hiệu ứng lớp học -->
+        <div class="flex flex-wrap items-center gap-2">
+          
+          <!-- BỘ HIỆU ỨNG TƯƠNG TÁC LỚP HỌC (ATMOSPHERE FX) -->
+          <div class="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border-2 border-slate-300">
+            <button onclick="triggerApplauseFX()" title="Kích hoạt tràng pháo tay giòn giã"
+              class="pop-btn pop-btn-yellow px-2.5 py-1.5 rounded-xl text-xs font-black">
+              👏 Vỗ tay
+            </button>
+            <button onclick="triggerFireworksFX()" title="Bắn pháo hoa chúc mừng cả lớp"
+              class="pop-btn pop-btn-coral px-2.5 py-1.5 rounded-xl text-xs font-black">
+              🎆 Pháo hoa
+            </button>
+            <button onclick="triggerRainFX()" title="Hiệu ứng mưa rơi nhắc nhở trật tự"
+              class="pop-btn pop-btn-blue px-2.5 py-1.5 rounded-xl text-xs font-black">
+              🌧️ Mưa
+            </button>
+            <button onclick="triggerSunFX()" title="Hiệu ứng nắng ấm khích lệ tinh thần"
+              class="pop-btn pop-btn-yellow px-2.5 py-1.5 rounded-xl text-xs font-black">
+              ☀️ Nắng
+            </button>
+          </div>
+
+          <!-- Nút Ẩn / Hiện điểm (Privacy Mode) -->
+          <button id="toggle-privacy-btn" onclick="togglePointsPrivacy()"
+            class="pop-btn pop-btn-white px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition"
+            title="Bật/tắt ẩn điểm số trên màn hình chiếu để học sinh không so sánh tự ti">
+            <span id="privacy-btn-label">👁️ Hiện điểm</span>
+          </button>
+
+          <!-- Nút Thu gọn / Mở rộng Cột tiện ích 10p -->
+          <button id="toggle-sidebar-btn" onclick="toggleSidebarExpansion()"
+            class="pop-btn pop-btn-white px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition"
+            title="Mở rộng lưới học sinh toàn màn hình hoặc hiện cột tiện ích">
+            <span id="sidebar-btn-label">📺 Toàn màn hình</span>
+          </button>
+
+          <button onclick="openRandomStudentModal()"
+            class="pop-btn pop-btn-yellow px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-black">
+            <span>🎡 Random HS</span>
+          </button>
+
+          <button onclick="openRandomCardModal('power')"
+            class="pop-btn pop-btn-blue px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-black">
+            <span>🎁 Bốc Power Card</span>
+          </button>
+
+          <button onclick="openRandomCardModal('penalty')"
+            class="pop-btn pop-btn-violet px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-black">
+            <span>🎯 Bốc Challenge Card</span>
+          </button>
+
+          <button onclick="rewardWholeClass(1)"
+            class="pop-btn pop-btn-green px-3 py-2.5 rounded-2xl text-xs sm:text-sm font-black">
+            <span>👏 +1đ Cả Lớp</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- 4 Thẻ chỉ số tổng quan lớp học -->
+      <div id="class-stats-bar" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+
+      <!-- Bố cục chính: Lưới học sinh co giãn + Cột tiện ích 10p & Ghi chú -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        
+        <!-- KHU VỰC LƯỚI HỌC SINH -->
+        <div id="classroom-main-col" class="lg:col-span-8 space-y-4 transition-all duration-300">
+          
+          <!-- Lọc nhóm và Tìm kiếm -->
+          <div class="bg-white rounded-2xl p-3 border-2 border-slate-300 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+            <div id="group-filter-buttons" class="flex flex-wrap items-center gap-1.5"></div>
+            
+            <div class="flex items-center gap-2 flex-1 max-w-xs">
+              <div class="relative w-full">
+                <input id="student-search-input" type="text" oninput="renderClassroom()"
+                  placeholder="Tìm tên hoặc mã HS (VD: HS01)..."
+                  class="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-100 border-2 border-slate-200 text-xs font-bold outline-none focus:bg-white focus:border-slate-900" />
+                <span class="absolute left-2.5 top-2 text-slate-400 text-xs">🔍</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lưới thẻ học sinh tinh gọn ClassDojo -->
+          <div id="students-grid" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4"></div>
+
+        </div>
+
+        <!-- CỘT TIỆN ÍCH PHỤ: PHÁT BIỂU 10P, GHI CHÚ GIÁO VIÊN & NHẬT KÝ LỚP -->
+        <div id="classroom-sidebar-col" class="lg:col-span-4 space-y-4 transition-all duration-300">
+          
+          <!-- Widget: Sổ tay / Ghi chú của Giáo viên cho lớp học này -->
+          <div class="bg-amber-50 rounded-3xl p-5 border-2 border-slate-900 shadow-[0_6px_0_#1e293b]">
+            <div class="flex items-center justify-between gap-2 mb-2.5">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">📝</span>
+                <div>
+                  <h3 class="text-sm font-black text-slate-900 leading-tight">Ghi chú của Giáo viên</h3>
+                  <p id="class-note-subtitle" class="text-[10px] font-bold text-slate-500">Lưu riêng cho từng lớp học</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span id="class-note-status" class="text-[10px] font-black text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">
+                  ● Tự động lưu
+                </span>
+                <button type="button" onclick="clearCurrentClassNote()" title="Xóa trắng ghi chú lớp này"
+                  class="text-[11px] font-bold text-slate-400 hover:text-rose-600 px-1.5 py-0.5 rounded">
+                  Xóa
+                </button>
+              </div>
+            </div>
+
+            <textarea id="teacher-class-note-input" rows="4" oninput="handleClassNoteInput(this.value)"
+              placeholder="Ghi chú nhanh cho lớp học này (VD: Dặn dò kiểm tra 15p tiết tới, học sinh vắng, bài tập về nhà trang 45...)"
+              class="w-full p-3 rounded-2xl bg-white border-2 border-amber-300 focus:border-slate-900 text-xs font-bold text-slate-800 outline-none resize-y leading-relaxed shadow-inner"></textarea>
+          </div>
+
+          <!-- Widget: Học sinh phát biểu trong 10 phút tới -->
+          <div class="bg-white rounded-3xl p-5 border-2 border-slate-900 shadow-[0_6px_0_#1e293b]">
+            <div class="flex items-center justify-between gap-2 mb-3">
+              <div>
+                <span class="text-[11px] font-black uppercase tracking-wider text-amber-900 bg-amber-200 border border-amber-300 px-2.5 py-0.5 rounded-full">
+                  ⏱️ Trong Tiết Dạy
+                </span>
+                <h3 class="text-base font-black text-slate-900 mt-1">Phát biểu 10p tới</h3>
+              </div>
+              <div class="text-right">
+                <div id="speech-timer-display" class="text-2xl font-black font-mono text-slate-900 bg-amber-300 px-3 py-1 rounded-xl border-2 border-slate-900 shadow-[0_2px_0_#1e293b]">
+                  10:00
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 mb-4">
+              <button id="timer-toggle-btn" onclick="toggleSpeechTimer()"
+                class="pop-btn pop-btn-blue flex-1 py-2 px-3 rounded-xl text-xs font-black">
+                ▶️ Bắt đầu 10p
+              </button>
+              <button onclick="resetSpeechTimer()"
+                class="pop-btn pop-btn-white py-2 px-3 rounded-xl text-xs font-bold">
+                🔄 Đặt lại
+              </button>
+              <button onclick="pickRandomToSpeechQueue()" title="Chọn ngẫu nhiên 1 bạn đưa vào danh sách"
+                class="pop-btn pop-btn-yellow py-2 px-3 rounded-xl text-xs font-black">
+                🎲 +Random
+              </button>
+            </div>
+
+            <!-- Form thêm nhanh học sinh vào DS phát biểu 10p -->
+            <form onsubmit="handleAddSpeechQueue(event)" class="space-y-2 mb-4 bg-slate-50 p-3 rounded-2xl border-2 border-slate-200">
+              <div class="grid grid-cols-1 gap-2">
+                <select id="speech-student-select" required
+                  class="w-full px-3 py-2 rounded-xl bg-white border-2 border-slate-300 text-xs font-black text-slate-800 outline-none">
+                </select>
+                <div class="flex gap-2">
+                  <input id="speech-topic-input" type="text"
+                    placeholder="Nội dung câu hỏi phát biểu..."
+                    class="flex-1 px-3 py-2 rounded-xl bg-white border-2 border-slate-300 text-xs font-bold outline-none" />
+                  <button type="submit"
+                    class="pop-btn pop-btn-dark px-3.5 py-2 rounded-xl text-xs font-black shrink-0">
+                    + Thêm
+                  </button>
+                </div>
+              </div>
+            </form>
+
+            <!-- Danh sách phát biểu -->
+            <div id="speech-queue-list" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
+          </div>
+
+          <!-- Widget: Nhật ký lớp học gần đây -->
+          <div class="bg-white rounded-3xl p-5 border-2 border-slate-900 shadow-[0_6px_0_#1e293b]">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-black text-slate-900">📜 Nhật ký lớp học</h3>
+              <span class="text-[11px] font-bold text-slate-400">Gần nhất</span>
+            </div>
+            <div id="class-activity-feed" class="space-y-2 max-h-64 overflow-y-auto pr-1 text-xs"></div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- TRỤC SỐ ĐỐI CHIẾU MỐC ĐIỂM (POINT LINE - CHUYỂN XUỐNG DƯỚI CÙNG) -->
+      <div class="bg-white rounded-3xl p-4 sm:p-5 border-2 border-slate-900 shadow-[0_4px_0_#1e293b]">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-black uppercase tracking-wider bg-amber-300 text-slate-900 border border-slate-900 px-3 py-0.5 rounded-full shadow-[0_2px_0_#1e293b]">
+              📏 TRỤC SỐ ĐỐI CHIẾU POINT LINE
+            </span>
+            <span class="text-xs font-bold text-slate-500 hidden sm:inline">Các mốc điểm thưởng (10, 20, 30...) được đánh dấu trên trục số để đối chiếu nhận Power Card</span>
+          </div>
+          <button onclick="openMilestoneSettingsModal()"
+            class="pop-btn pop-btn-white px-3 py-1.5 rounded-xl text-xs font-black">
+            ⚙️ Tùy chỉnh mốc trên trục
+          </button>
+        </div>
+
+        <!-- Trục số nằm ngang có vạch chia và cờ đánh dấu mốc thưởng -->
+        <div id="classroom-point-line-track" class="number-line-wrapper"></div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         TAB MỚI (MỤC 4): CHIA NHÓM NGẪU NHIÊN, TÙY CHỈNH & THƯỞNG/THỬ THÁCH NHÓM
+         ====================================================================== -->
+    <section id="tab-groups" class="hidden flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+      
+      <!-- Banner & Bộ điều khiển Chia Nhóm Ngẫu Nhiên -->
+      <div class="bg-emerald-300 rounded-3xl p-6 sm:p-7 text-slate-900 border-2 border-slate-900 shadow-[0_8px_0_#1e293b] flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6">
+        <div class="max-w-xl">
+          <span class="inline-block text-xs font-black uppercase tracking-wider bg-white px-3.5 py-1 rounded-full border-2 border-slate-900 shadow-[0_2px_0_#1e293b] mb-2">
+            👥 Quản Lý Nhóm & Hoạt Động Đồng Đội
+          </span>
+          <h2 class="text-2xl sm:text-3xl font-black mb-1.5">Chia Nhóm & Phân Phối Phần Thưởng</h2>
+          <p class="text-sm font-bold text-slate-800">
+            Chia nhóm ngẫu nhiên trong 1 chạm, tùy ý chuyển đổi thành viên giữa các nhóm, và phát điểm thưởng hoặc thẻ <strong>Power Card / Challenge Card</strong> đồng loạt cho cả nhóm.
+          </p>
+        </div>
+
+        <!-- Khung công cụ Chia Nhóm Ngẫu Nhiên & Tạo Nhóm Mới -->
+        <div class="bg-white p-4 rounded-2xl border-2 border-slate-900 shadow-[0_4px_0_#1e293b] flex flex-wrap items-center gap-3 w-full xl:w-auto">
+          <div class="flex items-center gap-2">
+            <label class="text-xs font-black text-slate-700 whitespace-nowrap">Số nhóm muốn chia:</label>
+            <select id="random-group-count-select"
+              class="px-3 py-2 rounded-xl bg-amber-50 border-2 border-slate-900 font-black text-sm text-slate-900 outline-none">
+              <option value="2">2 Nhóm</option>
+              <option value="3">3 Nhóm</option>
+              <option value="4" selected>4 Nhóm</option>
+              <option value="5">5 Nhóm</option>
+              <option value="6">6 Nhóm</option>
+            </select>
+          </div>
+
+          <button onclick="randomizeClassGroups()"
+            class="pop-btn pop-btn-yellow px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black">
+            🎲 Chia Nhóm Ngẫu Nhiên
+          </button>
+
+          <button onclick="handleCreateNewGroup()"
+            class="pop-btn pop-btn-white px-3.5 py-2.5 rounded-xl text-xs font-black">
+            + Thêm Nhóm Mới
+          </button>
+        </div>
+      </div>
+
+      <!-- Lưới hiển thị các Nhóm và danh sách thành viên trong từng nhóm -->
+      <div id="groups-management-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+
+    </section>
+
+    <!-- ======================================================================
+         TAB MỚI (MỤC 2): THỐNG KÊ & BẢNG XẾP HẠNG TUẦN / THÁNG (RANKING)
+         ====================================================================== -->
+    <section id="tab-ranking" class="hidden flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+      
+      <!-- Header & Bộ lọc Thời gian (Tuần này / Tháng này / Tổng điểm) -->
+      <div class="bg-amber-300 rounded-3xl p-6 sm:p-7 text-slate-900 border-2 border-slate-900 shadow-[0_8px_0_#1e293b] flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+        <div class="max-w-xl">
+          <span class="inline-block text-xs font-black uppercase tracking-wider bg-white px-3.5 py-1 rounded-full border-2 border-slate-900 shadow-[0_2px_0_#1e293b] mb-2">
+            🏆 Bảng Vàng Thi Đua Lớp Học
+          </span>
+          <h2 class="text-2xl sm:text-3xl font-black mb-1.5">Thống Kê Tăng Trưởng & Bảng Xếp Hạng</h2>
+          <p class="text-sm font-bold text-slate-800">
+            Theo dõi xem trong <strong>Tuần này</strong> hoặc <strong>Tháng này</strong> bạn nào đã nỗ lực tăng được nhiều điểm thưởng nhất để kịp thời tuyên dương!
+          </p>
+        </div>
+
+        <!-- Bộ lọc chọn kỳ thống kê -->
+        <div class="flex flex-wrap items-center gap-2 bg-white p-2 rounded-2xl border-2 border-slate-900 shadow-[0_4px_0_#1e293b]">
+          <button id="rank-filter-week" onclick="setRankingPeriod('week')"
+            class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition bg-amber-400 text-slate-950 border-2 border-slate-900 shadow-[0_2px_0_#1e293b]">
+            📅 Tuần Này (7 ngày qua)
+          </button>
+          <button id="rank-filter-month" onclick="setRankingPeriod('month')"
+            class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition text-slate-600 hover:text-slate-900">
+            🗓️ Tháng Này (30 ngày qua)
+          </button>
+          <button id="rank-filter-all" onclick="setRankingPeriod('all')"
+            class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition text-slate-600 hover:text-slate-900">
+            ⭐ Tổng Điểm Tích Lũy
+          </button>
+        </div>
+      </div>
+
+      <!-- Bục Vinh Danh Top 3 Học Sinh Bứt Phá Nhất (Podium Top 3) -->
+      <div id="ranking-podium-container" class="grid grid-cols-1 md:grid-cols-3 gap-5 items-end"></div>
+
+      <!-- Bố cục: Bảng Xếp Hạng Chi Tiết Học Sinh (8 cột) + Xếp Hạng Thi Đua Nhóm (4 cột) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Cột trái: Bảng xếp hạng toàn bộ học sinh -->
+        <div class="lg:col-span-8 bg-white rounded-3xl p-5 sm:p-6 border-2 border-slate-900 shadow-[0_6px_0_#1e293b]">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <h3 id="ranking-table-title" class="text-lg font-black text-slate-900">📊 Chi Tiết Tăng Điểm Tuần Này</h3>
+            <span class="text-xs font-bold text-slate-500">Bấm vào học sinh bất kỳ để xem lịch sử chi tiết</span>
+          </div>
+          <div id="ranking-students-list" class="space-y-2.5"></div>
+        </div>
+
+        <!-- Cột phải: Xếp hạng thi đua giữa các Nhóm -->
+        <div class="lg:col-span-4 bg-white rounded-3xl p-5 sm:p-6 border-2 border-slate-900 shadow-[0_6px_0_#1e293b]">
+          <h3 class="text-lg font-black text-slate-900 mb-1">🛡️ Xếp Hạng Các Nhóm</h3>
+          <p class="text-xs font-bold text-slate-500 mb-4">Tổng điểm tăng trưởng của các thành viên trong nhóm</p>
+          <div id="ranking-groups-list" class="space-y-3"></div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ======================================================================
+         TAB 4: BỘ THẺ POWER CARD (PHONG CÁCH BOARDGAME & CHỜ PDF)
+         ====================================================================== -->
+    <section id="tab-power-cards" class="hidden flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <div class="bg-amber-400 rounded-3xl p-6 sm:p-8 text-slate-900 border-2 border-slate-900 shadow-[0_8px_0_#1e293b] flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div class="max-w-2xl">
+          <span class="inline-block text-xs font-black uppercase tracking-wider bg-white px-3.5 py-1 rounded-full border-2 border-slate-900 shadow-[0_2px_0_#1e293b] mb-2">
+            ⚡ Túi Thẻ Quyền Lực (Power Cards)
+          </span>
+          <h2 class="text-2xl sm:text-3xl font-black mb-2">Bộ Thẻ Đặc Quyền Trong Lớp</h2>
+          <p class="text-sm font-bold text-slate-800">
+            Hiện có <strong>3 thẻ mẫu</strong>. Khung thẻ đã thiết kế chuẩn để sau này bạn gắn trực tiếp file PDF hoặc ảnh thiết kế vào từng thẻ thông qua nút <strong>"✏️ Sửa / Gắn file PDF"</strong>.
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <button onclick="openCreateCardModal('power')"
+            class="pop-btn pop-btn-blue px-5 py-3 rounded-2xl text-sm font-black">
+            + Thêm Thẻ Power Card Mới
+          </button>
+          <button onclick="openBulkImportCardsModal('power')"
+            class="pop-btn pop-btn-yellow px-5 py-3 rounded-2xl text-sm font-black"
+            title="Nhập danh sách thẻ Power Card hàng loạt với phôi ngẫu nhiên">
+            📥 Nhập thẻ hàng loạt
+          </button>
+          <button onclick="openRandomCardModal('power')"
+            class="pop-btn pop-btn-white px-5 py-3 rounded-2xl text-sm font-black">
+            🎡 Mở Vòng Quay Power Card
+          </button>
+        </div>
+      </div>
+
+      <!-- Lưới danh sách thẻ Power Card -->
+      <div id="power-cards-deck-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+    </section>
+
+    <!-- ======================================================================
+         TAB 5: BỘ THẺ CHALLENGE CARD
+         ====================================================================== -->
+    <section id="tab-penalty-cards" class="hidden flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <div class="bg-violet-400 rounded-3xl p-6 sm:p-8 text-slate-900 border-2 border-slate-900 shadow-[0_8px_0_#1e293b] flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div class="max-w-2xl">
+          <span class="inline-block text-xs font-black uppercase tracking-wider bg-white px-3.5 py-1 rounded-full border-2 border-slate-900 shadow-[0_2px_0_#1e293b] mb-2">
+            🎯 Thử Thách Vui Vẻ & Kỷ Luật Tích Cực
+          </span>
+          <h2 class="text-2xl sm:text-3xl font-black mb-2">Bộ Thẻ Thử Thách (Challenge Cards)</h2>
+          <p class="text-sm font-bold text-slate-900">
+            Các thẻ thử thách (Challenge Cards) cá nhân và nhóm giúp rèn luyện thói quen tốt và tạo không khí vui nhộn trong lớp. Bạn có thể nạp file PDF thiết kế vào từng thẻ bất cứ lúc nào.
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <button onclick="openCreateCardModal('penalty')"
+            class="pop-btn pop-btn-yellow px-5 py-3 rounded-2xl text-sm font-black">
+            + Thêm Challenge Card Mới
+          </button>
+          <button onclick="openBulkImportCardsModal('penalty')"
+            class="pop-btn pop-btn-green px-5 py-3 rounded-2xl text-sm font-black"
+            title="Nhập danh sách thẻ Challenge Card hàng loạt với phôi ngẫu nhiên">
+            📥 Nhập thẻ hàng loạt
+          </button>
+          <button onclick="openRandomCardModal('penalty')"
+            class="pop-btn pop-btn-white px-5 py-3 rounded-2xl text-sm font-black">
+            🎯 Mở Vòng Quay Challenge Card
+          </button>
+        </div>
+      </div>
+
+      <!-- Lưới danh sách thẻ Challenge Card -->
+      <div id="penalty-cards-deck-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+    </section>
+
+    <!-- ======================================================================
+         TAB 6: CỔNG HỌC SINH (MÃ CODE, TIẾN TRÌNH XEM MÌNH ĐÃ ĐẠT ĐẾN ĐÂU)
+         ====================================================================== -->
+    <section id="tab-student-portal" class="hidden flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+      
+      <!-- Khung nhập mã Code Học sinh -->
+      <div class="bg-white rounded-3xl p-6 sm:p-8 border-2 border-slate-900 shadow-[0_8px_0_#1e293b]">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+          <div>
+            <span class="text-xs font-black uppercase tracking-wider text-amber-950 bg-amber-300 border border-slate-900 px-3.5 py-1 rounded-full shadow-[0_2px_0_#1e293b]">
+              🎒 CỔNG TRA CỨU HỌC SINH
+            </span>
+            <h2 class="text-2xl font-black text-slate-900 mt-2">Tra Cứu Điểm, Tiến Trình & Túi Thẻ</h2>
+            <p class="text-sm font-bold text-slate-500">
+              Nhập mã cá nhân của em (VD: <strong>HS01, HS02, HS03...</strong>) để xem em <strong>đã đạt đến mốc điểm nào</strong> trên Point Line, cần bao nhiêu điểm nữa để nhận <strong>Power Card</strong>, và xem các <strong>Challenge Card</strong> của em.
+            </p>
+          </div>
+        </div>
+
+        <form onsubmit="handleStudentPortalSearch(event)" class="flex flex-col sm:flex-row gap-3">
+          <input id="portal-code-input" type="text" required
+            placeholder="Nhập mã Code học sinh (VD: HS01)..."
+            class="flex-1 px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-slate-900 font-black text-lg uppercase tracking-wider text-slate-900 outline-none focus:bg-white shadow-[0_3px_0_#1e293b]" />
+          <button type="submit"
+            class="pop-btn pop-btn-blue px-8 py-3.5 rounded-2xl text-sm font-black">
+            🔍 Xem Tiến Trình Của Em
+          </button>
+        </form>
+
+        <!-- Chọn nhanh mã mẫu -->
+        <div class="mt-4 pt-4 border-t-2 border-slate-100 flex flex-wrap items-center gap-2">
+          <span class="text-xs font-black text-slate-400 mr-1">Bấm thử nhanh mã HS:</span>
+          <div id="portal-quick-codes" class="flex flex-wrap gap-1.5"></div>
+        </div>
+      </div>
+
+      <!-- Kết quả hồ sơ học sinh -->
+      <div id="student-portal-result" class="space-y-6"></div>
+
+    </section>
+
+  </div>
+
+  <!-- ========================================================================
+       3. CÁC MODAL TƯƠNG TÁC
+       ======================================================================== -->
+
+  <!-- MODAL PHÂN PHỐI PHẦN THƯỞNG / CHALLENGE CARD CHO CẢ NHÓM -->
+  <div id="group-reward-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 border-2 border-slate-900 shadow-[0_12px_0_#1e293b] animate-pop">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <span class="text-xs font-black uppercase tracking-wider bg-emerald-300 text-slate-900 border border-slate-900 px-3 py-0.5 rounded-full">
+            👥 Thưởng & Giao Thử Thách Theo Nhóm
+          </span>
+          <h3 id="group-modal-title" class="text-2xl font-black text-slate-900 mt-1">Phân phối cho Nhóm 1</h3>
+        </div>
+        <button onclick="closeModal('group-reward-modal')" class="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-100 hover:bg-slate-200 text-slate-900 font-black">✕</button>
+      </div>
+
+      <p id="group-modal-subtitle" class="text-xs font-bold text-slate-500 mb-5"></p>
+
+      <div class="space-y-5">
+        <!-- 1. Cộng / Trừ điểm cho toàn bộ thành viên trong nhóm -->
+        <div class="p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-300">
+          <h4 class="text-xs font-black uppercase text-emerald-950 mb-2.5">⭐ 1. Phân phối Điểm Thưởng / Nhắc Nhở đến từng thành viên</h4>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="distributeGroupPoints(1, 'Thưởng hoạt động nhóm tích cực')"
+              class="pop-btn pop-btn-green px-3.5 py-2 rounded-xl text-xs font-black">
+              +1đ mỗi bạn
+            </button>
+            <button onclick="distributeGroupPoints(2, 'Thưởng nhóm xuất sắc')"
+              class="pop-btn pop-btn-green px-3.5 py-2 rounded-xl text-xs font-black">
+              +2đ mỗi bạn
+            </button>
+            <button onclick="distributeGroupPoints(5, 'Giải Nhất thảo luận nhóm')"
+              class="pop-btn pop-btn-yellow px-3.5 py-2 rounded-xl text-xs font-black">
+              🌟 +5đ mỗi bạn
+            </button>
+            <button onclick="distributeGroupPoints(-1, 'Nhắc nhở nhóm mất trật tự')"
+              class="pop-btn pop-btn-coral px-3.5 py-2 rounded-xl text-xs font-black">
+              -1đ mỗi bạn
+            </button>
+            <button onclick="distributeGroupPoints(-2, 'Nhóm chưa hoàn thành nhiệm vụ')"
+              class="pop-btn pop-btn-coral px-3.5 py-2 rounded-xl text-xs font-black">
+              -2đ mỗi bạn
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Quay ngẫu nhiên hoặc Phát thẻ Power Card cho tất cả thành viên trong nhóm -->
+        <div class="p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h4 class="text-xs font-black uppercase text-amber-950">⚡ 2. Quay hoặc Phát thẻ Power Card cho cả nhóm</h4>
+            <button type="button" onclick="openGroupSpinFromModal('power')"
+              class="pop-btn pop-btn-blue px-3 py-1.5 rounded-xl text-xs font-black">
+              🎡 Mở Vòng Quay Power Card Cho Nhóm
+            </button>
+          </div>
+          <div class="flex gap-2">
+            <select id="group-grant-power-select" class="flex-1 px-3 py-2 rounded-xl bg-white border-2 border-slate-900 text-xs font-black outline-none">
+            </select>
+            <button onclick="distributeGroupCard('power')"
+              class="pop-btn pop-btn-yellow px-4 py-2 rounded-xl text-xs font-black shrink-0">
+              🎁 Phát thẻ đã chọn
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. Quay ngẫu nhiên hoặc Giao thẻ Challenge Card cho tất cả thành viên trong nhóm -->
+        <div class="p-4 rounded-2xl bg-violet-50 border-2 border-violet-300 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h4 class="text-xs font-black uppercase text-violet-950">🎯 3. Quay hoặc Giao Challenge Card cho cả nhóm</h4>
+            <button type="button" onclick="openGroupSpinFromModal('penalty')"
+              class="pop-btn pop-btn-violet px-3 py-1.5 rounded-xl text-xs font-black">
+              🎯 Mở Vòng Quay Challenge Card Cho Nhóm
+            </button>
+          </div>
+          <div class="flex gap-2">
+            <select id="group-grant-penalty-select" class="flex-1 px-3 py-2 rounded-xl bg-white border-2 border-slate-900 text-xs font-black outline-none">
+            </select>
+            <button onclick="distributeGroupCard('penalty')"
+              class="pop-btn pop-btn-violet px-4 py-2 rounded-xl text-xs font-black shrink-0">
+              🎯 Giao thẻ đã chọn
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CÀI ĐẶT MỐC ĐIỂM ĐỐI CHIẾU POINT LINE (CHO GIÁO VIÊN) -->
+  <div id="milestone-settings-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 border-2 border-slate-900 shadow-[0_12px_0_#1e293b] max-h-[90vh] overflow-y-auto animate-pop">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-xl font-black text-slate-900">⚙️ Bảng Mốc Đối Chiếu Point Line</h3>
+          <p class="text-xs font-bold text-slate-500">Tùy chỉnh danh sách các mốc điểm tròn chục để đối chiếu quyền rút Power Card</p>
+        </div>
+        <button onclick="closeModal('milestone-settings-modal')" class="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-100 hover:bg-slate-200 text-slate-900 font-black">✕</button>
+      </div>
+
+      <div id="milestone-list-container" class="space-y-2.5 mb-5"></div>
+
+      <form onsubmit="handleAddNewMilestone(event)" class="bg-amber-50 p-4 rounded-2xl border-2 border-amber-300 space-y-3">
+        <h4 class="text-xs font-black uppercase text-amber-950">+ Thêm Mốc Đối Chiếu Mới</h4>
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="block text-[11px] font-black text-slate-700 mb-1">Mốc điểm *</label>
+            <input id="new-milestone-threshold" type="number" min="1" step="1" required placeholder="VD: 15"
+              class="w-full px-3 py-2 rounded-xl border-2 border-slate-300 text-sm font-black outline-none focus:border-slate-900 bg-white" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-black text-slate-700 mb-1">Biểu tượng</label>
+            <input id="new-milestone-icon" type="text" value="⚡" required
+              class="w-full px-3 py-2 rounded-xl border-2 border-slate-300 text-center text-sm font-black outline-none focus:border-slate-900 bg-white" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-black text-slate-700 mb-1">Hành động</label>
+            <button type="submit" class="pop-btn pop-btn-green w-full py-2 rounded-xl text-xs font-black">
+              + Thêm mốc
+            </button>
+          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] font-black text-slate-700 mb-1">Phần thưởng đối chiếu</label>
+          <input id="new-milestone-reward" type="text" value="Rút 1 Thẻ Power Card" required
+            class="w-full px-3 py-2 rounded-xl border-2 border-slate-300 text-xs font-bold outline-none focus:border-slate-900 bg-white" />
+        </div>
+      </form>
+
+      <div class="flex justify-end gap-2 pt-4">
+        <button onclick="restoreDefaultMilestones()" class="pop-btn pop-btn-white px-4 py-2 rounded-xl text-xs font-black text-slate-600">
+          Khôi phục mốc tròn chục (10, 20, 30...)
+        </button>
+        <button onclick="closeModal('milestone-settings-modal')" class="pop-btn pop-btn-dark px-5 py-2 rounded-xl text-xs font-black">
+          Xong
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 1: CHI TIẾT HỌC SINH -->
+  <div id="student-detail-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-4xl w-full max-h-[92vh] overflow-y-auto border-2 border-slate-900 shadow-[0_12px_0_#1e293b] animate-pop">
+      <div id="student-modal-content" class="p-6 sm:p-8"></div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: RANDOM HỌC SINH (VÒNG QUAY MAY MẮN) -->
+  <div id="random-student-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 border-2 border-slate-900 shadow-[0_12px_0_#1e293b] text-center animate-pop">
+      <div class="flex items-center justify-between mb-4">
+        <span class="text-xs font-black uppercase tracking-wider bg-amber-300 text-slate-900 border border-slate-900 px-3.5 py-1 rounded-full shadow-[0_2px_0_#1e293b]">
+          🎡 Vòng Quay Ngẫu Nhiên
+        </span>
+        <button onclick="closeModal('random-student-modal')" class="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-100 hover:bg-slate-200 text-slate-900 font-black">✕</button>
+      </div>
+
+      <h3 class="text-2xl font-black text-slate-900 mb-1">Ai sẽ là người được gọi tên?</h3>
+      <p class="text-xs font-bold text-slate-500 mb-4">Bấm nút quay để hệ thống chọn ngẫu nhiên 1 học sinh theo tiêu chí đã chọn</p>
+
+      <!-- BỘ LỌC ĐỐI TƯỢNG QUAY HỌC SINH (CÓ CHỌN TÙY Ý) -->
+      <div class="bg-slate-50 rounded-2xl p-3.5 border-2 border-slate-300 text-left mb-4 space-y-2.5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span class="text-xs font-black text-slate-800 flex items-center gap-1.5">
+            🎯 Đối tượng quay ngẫu nhiên:
+          </span>
+          <span id="random-eligible-count" class="text-[11px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-200">
+            Đang có 10 bạn phù hợp
+          </span>
+        </div>
+
+        <!-- Chuyển chế độ: Lọc theo tiêu chí HOẶC Chọn học sinh tùy ý -->
+        <div class="flex gap-1.5 bg-slate-200/80 p-1 rounded-xl">
+          <button type="button" id="random-mode-criteria-btn" onclick="setRandomSelectionMode('criteria')"
+            class="flex-1 py-1.5 px-2.5 rounded-lg text-xs font-black transition bg-white text-slate-900 border border-slate-900 shadow-xs">
+            ⚡ Lọc theo Nhóm / Tiêu chí
+          </button>
+          <button type="button" id="random-mode-custom-btn" onclick="setRandomSelectionMode('custom')"
+            class="flex-1 py-1.5 px-2.5 rounded-lg text-xs font-black transition text-slate-600 hover:text-slate-900">
+            ☑️ Tích chọn học sinh tùy ý
+          </button>
+        </div>
+
+        <!-- KHUNG 1: Lọc theo Nhóm & Tiêu chí -->
+        <div id="random-criteria-panel" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Theo Nhóm / Tổ:</label>
+            <select id="random-filter-group" onchange="updateRandomEligiblePool()"
+              class="w-full px-2.5 py-1.5 rounded-xl bg-white border-2 border-slate-300 text-xs font-black text-slate-800 outline-none focus:border-slate-900">
+              <option value="ALL">Tất cả các nhóm</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Theo phát biểu / điểm:</label>
+            <select id="random-filter-criteria" onchange="updateRandomEligiblePool()"
+              class="w-full px-2.5 py-1.5 rounded-xl bg-white border-2 border-slate-300 text-xs font-black text-slate-800 outline-none focus:border-slate-900">
+              <option value="ALL">Tất cả học sinh</option>
+              <option value="NO_SPEECH">Chưa phát biểu lần nào (0 lượt)</option>
+              <option value="LOW_SPEECH">Ít phát biểu nhất (dưới TB lớp)</option>
+              <option value="LOW_POINTS">Điểm thấp (cần gỡ điểm: &lt; 15đ)</option>
+              <option value="HIGH_POINTS">Điểm cao (thử thách khó: &ge; 20đ)</option>
+              <option value="HAS_CHALLENGE">Đang có Challenge Card</option>
+              <option value="HAS_POWER">Đang có Power Card chưa dùng</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- KHUNG 2: Tích chọn học sinh tùy ý -->
+        <div id="random-custom-panel" class="hidden space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[11px] font-bold text-slate-600">Tích chọn những bạn muốn đưa vào vòng quay:</span>
+            <div class="flex items-center gap-1.5">
+              <button type="button" onclick="toggleAllCustomRandomStudents(true)"
+                class="px-2 py-0.5 rounded-md bg-white border border-slate-300 hover:border-slate-900 text-[10px] font-black text-slate-700">
+                Chọn hết
+              </button>
+              <button type="button" onclick="toggleAllCustomRandomStudents(false)"
+                class="px-2 py-0.5 rounded-md bg-white border border-slate-300 hover:border-slate-900 text-[10px] font-black text-rose-600">
+                Bỏ hết
+              </button>
+            </div>
+          </div>
+          <div id="random-custom-students-list" class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-40 overflow-y-auto p-2 bg-white rounded-xl border-2 border-slate-200"></div>
+        </div>
+
+        <div class="flex items-center gap-2 pt-1 border-t border-slate-200">
+          <label class="inline-flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
+            <input type="checkbox" id="random-filter-exclude-last" checked onchange="updateRandomEligiblePool()"
+              class="rounded border-slate-300 text-amber-500 focus:ring-0 w-4 h-4 cursor-pointer" />
+            <span>Không gọi lại bạn vừa quay ở lượt trước</span>
+          </label>
+        </div>
+      </div>
+
+      <div id="random-student-stage" class="bg-amber-50/70 rounded-3xl p-6 border-2 border-dashed border-slate-900 mb-5">
+        <div id="random-student-avatar" class="w-24 h-24 rounded-3xl bg-white border-2 border-slate-900 shadow-[0_4px_0_#1e293b] mx-auto flex items-center justify-center text-5xl mb-3">
+          🎲
+        </div>
+        <div id="random-student-name" class="text-2xl font-black text-slate-900">Sẵn sàng quay!</div>
+        <div id="random-student-code" class="text-xs font-black text-indigo-700 mt-1">Bấm nút bên dưới để bắt đầu</div>
+      </div>
+
+      <div id="random-student-actions" class="hidden flex flex-wrap justify-center gap-2 mb-5">
+        <button onclick="addPickedStudentToSpeechQueue()"
+          class="pop-btn pop-btn-yellow px-3.5 py-2 rounded-xl text-xs font-black">
+          ⏱️ Đưa vào DS phát biểu 10p
+        </button>
+        <button onclick="rewardPickedStudent(2, 'Trả lời câu hỏi Random tốt')"
+          class="pop-btn pop-btn-green px-3.5 py-2 rounded-xl text-xs font-black">
+          🌟 Thưởng +2 điểm
+        </button>
+        <button onclick="openPickedStudentDetail()"
+          class="pop-btn pop-btn-blue px-3.5 py-2 rounded-xl text-xs font-black">
+          🃏 Xem túi thẻ
+        </button>
+      </div>
+
+      <button id="btn-spin-student" onclick="spinRandomStudent()"
+        class="pop-btn pop-btn-yellow w-full py-4 rounded-2xl text-base font-black">
+        🎰 QUAY NGẪU NHIÊN HỌC SINH
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 3: RANDOM THẺ POWER CARD / CHALLENGE CARD -->
+  <div id="random-card-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 border-2 border-slate-900 shadow-[0_12px_0_#1e293b] animate-pop">
+      <div class="flex items-center justify-between mb-4">
+        <span id="random-card-badge" class="text-xs font-black uppercase tracking-wider bg-amber-300 text-slate-900 border border-slate-900 px-3.5 py-1 rounded-full shadow-[0_2px_0_#1e293b]">
+          🎁 Vòng Quay Bốc Thẻ
+        </span>
+        <button onclick="closeModal('random-card-modal')" class="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-100 hover:bg-slate-200 text-slate-900 font-black">✕</button>
+      </div>
+
+      <div class="flex gap-2 mb-4 bg-slate-100 p-1.5 rounded-2xl border-2 border-slate-300">
+        <button id="switch-draw-power" onclick="setRandomCardMode('power')"
+          class="flex-1 py-2 rounded-xl text-xs font-black transition bg-amber-400 text-slate-900 border-2 border-slate-900 shadow-[0_2px_0_#1e293b]">
+          ⚡ Bốc Thẻ Power Card
+        </button>
+        <button id="switch-draw-penalty" onclick="setRandomCardMode('penalty')"
+          class="flex-1 py-2 rounded-xl text-xs font-black transition text-slate-600">
+          🎯 Bốc Challenge Card
+        </button>
+      </div>
+
+      <!-- Chọn đối tượng nhận thẻ: Cá nhân Học sinh HOẶC Cả Nhóm / Tổ -->
+      <div class="mb-4 bg-slate-50 p-3 rounded-2xl border-2 border-slate-300 space-y-2.5">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-black uppercase tracking-wider text-slate-700">🎁 Đối tượng nhận thẻ khi quay:</span>
+          <div class="flex gap-1.5 bg-slate-200/80 p-1 rounded-xl">
+            <button type="button" id="random-card-target-student-btn" onclick="setRandomCardTargetType('student')"
+              class="py-1 px-3 rounded-lg text-xs font-black transition bg-white text-slate-900 border border-slate-900 shadow-xs">
+              👤 Cá nhân HS
+            </button>
+            <button type="button" id="random-card-target-group-btn" onclick="setRandomCardTargetType('group')"
+              class="py-1 px-3 rounded-lg text-xs font-black transition text-slate-600 hover:text-slate-900">
+              👥 Cả Nhóm / Tổ
+            </button>
+          </div>
+        </div>
+
+        <!-- Chọn 1 học sinh -->
+        <div id="random-card-student-picker-wrap">
+          <select id="random-card-student-select"
+            class="w-full px-4 py-2.5 rounded-xl bg-white border-2 border-slate-900 font-black text-sm text-slate-900 outline-none">
+          </select>
+        </div>
+
+        <!-- Chọn cả nhóm để phân phối đồng loạt -->
+        <div id="random-card-group-picker-wrap" class="hidden">
+          <select id="random-card-group-select"
+            class="w-full px-4 py-2.5 rounded-xl bg-emerald-50 border-2 border-slate-900 font-black text-sm text-slate-900 outline-none">
+          </select>
+          <p class="text-[11px] font-bold text-emerald-800 mt-1">✨ Khi bấm xác nhận, thẻ quay trúng sẽ được phân phối đồng loạt cho tất cả thành viên trong nhóm này.</p>
+        </div>
+      </div>
+
+      <!-- Sân khấu lật thẻ 3D bí ẩn (3D Mystery Card Flip) -->
+      <div id="random-card-stage-container" class="mb-5 flex items-center justify-center min-h-[360px] bg-amber-50/60 p-4 rounded-3xl border-2 border-dashed border-slate-900">
+        <div id="random-card-flip-stage" class="card-flip-stage">
+          <div id="random-card-flipper" class="card-flip-flipper">
+            <!-- Mặt úp bí ẩn của thẻ -->
+            <div class="card-flip-back">
+              <div class="text-6xl mb-3 animate-pulse">✨🃏✨</div>
+              <div class="text-lg font-black tracking-widest uppercase text-amber-300">THẺ BÍ ẨN</div>
+              <p class="text-[11px] font-bold text-slate-400 mt-1">ClassJoy Magic Deck</p>
+            </div>
+            <!-- Mặt ngửa chứa thẻ bài thiết kế đồ họa -->
+            <div id="random-card-front-content" class="card-flip-front flex items-center justify-center">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-3">
+        <button id="btn-spin-card" onclick="spinRandomCard()"
+          class="pop-btn pop-btn-blue flex-1 py-3.5 px-5 rounded-2xl text-sm font-black">
+          🎰 QUAY THẺ NGẪU NHIÊN
+        </button>
+        <button id="btn-assign-drawn-card" onclick="confirmAssignDrawnCard()"
+          class="hidden pop-btn pop-btn-green flex-1 py-3.5 px-5 rounded-2xl text-sm font-black">
+          ✅ Cấp Thẻ Này Cho Học Sinh
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: SOẠN NỘI DUNG & CHỌN PHÔI THẺ TỪ FOLDER CARD -->
+  <div id="card-editor-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 border-2 border-slate-900 shadow-[0_12px_0_#1e293b] max-h-[92vh] overflow-y-auto animate-pop">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 id="card-editor-title" class="text-xl font-black text-slate-900">🎨 Soạn Nội Dung & Chọn Phôi Thẻ</h3>
+          <p class="text-xs font-bold text-slate-500">Điền chữ trực tiếp vào các phôi thẻ bài từ folder Card/ (24 mẫu phôi ảnh rực rỡ)</p>
+        </div>
+        <button onclick="closeModal('card-editor-modal')" class="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-100 hover:bg-slate-200 text-slate-900 font-black">✕</button>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Cột trái: Form nhập nội dung & Chọn phôi -->
+        <form onsubmit="handleSaveCardTemplate(event)" class="lg:col-span-7 space-y-3.5">
+          <input type="hidden" id="edit-card-type" value="power" />
+          <input type="hidden" id="edit-card-id" value="" />
+          <input type="hidden" id="edit-card-frame" value="Card/1.jpg" />
+
+          <!-- Chọn phôi ảnh từ folder Card (1.jpg đến 24.jpg) -->
+          <div>
+            <label class="block text-xs font-black text-slate-700 mb-1.5">🖼️ Chọn phôi thẻ bài (Folder Card/ - 24 mẫu):</label>
+            <div id="card-frame-picker" class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin"></div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2.5">
+            <div class="col-span-2">
+              <label class="block text-xs font-black text-slate-700 mb-1">Tên thẻ bài *</label>
+              <input id="edit-card-name" type="text" required oninput="updateCardEditorPreview()"
+                placeholder="VD: Hoãn kiểm tra miệng..."
+                class="w-full px-3.5 py-2 rounded-xl border-2 border-slate-300 text-xs font-black outline-none focus:border-slate-900" />
+            </div>
+            <div>
+              <label class="block text-xs font-black text-slate-700 mb-1">Biểu tượng</label>
+              <input id="edit-card-icon" type="text" value="⚡" required oninput="updateCardEditorPreview()"
+                class="w-full px-3 py-2 rounded-xl border-2 border-slate-300 text-center text-sm font-black outline-none focus:border-slate-900" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-black text-slate-700 mb-1">Mã thẻ (Code)</label>
+            <input id="edit-card-code" type="text" required oninput="updateCardEditorPreview()"
+              placeholder="VD: PWR-04"
+              class="w-full px-3 py-2 rounded-xl border-2 border-slate-300 text-xs font-black uppercase outline-none focus:border-slate-900" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-black text-slate-700 mb-1">Nội dung quyền năng / Thử thách *</label>
+            <textarea id="edit-card-desc" rows="3" required oninput="updateCardEditorPreview()"
+              placeholder="Gõ nội dung thẻ vào đây, chữ sẽ tự động lồng vào phôi thẻ ở khung bên phải..."
+              class="w-full px-3.5 py-2 rounded-xl border-2 border-slate-300 text-xs font-bold outline-none focus:border-slate-900"></textarea>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <button type="button" onclick="closeModal('card-editor-modal')"
+              class="pop-btn pop-btn-white px-4 py-2 rounded-xl text-xs font-black">
+              Hủy
+            </button>
+            <button type="submit"
+              class="pop-btn pop-btn-yellow px-6 py-2 rounded-xl text-xs font-black">
+              💾 Lưu Thẻ Bài
+            </button>
+          </div>
+        </form>
+
+        <!-- Cột phải: Live Preview Thẻ bài thời gian thực -->
+        <div class="lg:col-span-5 flex flex-col items-center justify-center p-4 bg-slate-50 rounded-2xl border-2 border-slate-200">
+          <span class="text-[11px] font-black uppercase text-slate-400 mb-3 tracking-wider">👁️ Xem Trước Thời Gian Thực</span>
+          <div id="card-editor-live-preview" class="flex items-center justify-center w-full"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 5: XEM TRƯỚC FILE PDF THẺ -->
+  <div id="pdf-preview-modal" class="fixed inset-0 bg-slate-900/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-4xl w-full h-[85vh] flex flex-col border-2 border-slate-900 shadow-[0_12px_0_#1e293b] overflow-hidden animate-pop">
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <div>
+          <h4 id="pdf-preview-title" class="font-black text-sm">Xem thiết kế thẻ PDF</h4>
+          <p id="pdf-preview-subtitle" class="text-xs text-slate-300"></p>
+        </div>
+        <button onclick="closeModal('pdf-preview-modal')" class="px-3 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-xs font-black">Đóng ✕</button>
+      </div>
+      <div id="pdf-preview-body" class="flex-1 bg-slate-100 flex items-center justify-center p-4 overflow-auto"></div>
+    </div>
+  </div>
+
+  <!-- MODAL 6: THÊM HỌC SINH MỚI -->
+  <div id="add-student-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 border-2 border-slate-900 shadow-[0_12px_0_#1e293b] animate-pop">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-black text-slate-900">+ Thêm Học Sinh Mới</h3>
+        <button onclick="closeModal('add-student-modal')" class="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-100 text-slate-900 font-black">✕</button>
+      </div>
+      <form onsubmit="handleCreateStudent(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-black text-slate-700 mb-1">Họ và tên học sinh *</label>
+          <input id="new-student-name" type="text" required placeholder="VD: Nguyễn Văn An"
+            class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 text-sm font-black outline-none focus:border-slate-900" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-black text-slate-700 mb-1">Mã Code tra cứu *</label>
+            <input id="new-student-code" type="text" required placeholder="VD: HS11"
+              class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 text-sm font-black uppercase outline-none focus:border-slate-900" />
+          </div>
+          <div>
+            <label class="block text-xs font-black text-slate-700 mb-1">Nhóm / Tổ</label>
+            <select id="new-student-group"
+              class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 text-sm font-black outline-none">
+              <option value="Nhóm 1">Nhóm 1</option>
+              <option value="Nhóm 2">Nhóm 2</option>
+              <option value="Nhóm 3">Nhóm 3</option>
+              <option value="Nhóm 4">Nhóm 4</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-black text-slate-700 mb-1">Chọn Avatar nhân vật</label>
+          <select id="new-student-avatar"
+            class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 text-base font-bold outline-none">
+            <option value="🦖">🦖 Khủng long xanh</option>
+            <option value="🦄">🦄 Kỳ lân phép thuật</option>
+            <option value="🦊">🦊 Cáo thông thái</option>
+            <option value="🐼">🐼 Gấu trúc vui vẻ</option>
+            <option value="🦁">🦁 Sư tử dũng cảm</option>
+            <option value="🐰">🐰 Thỏ năng động</option>
+            <option value="🦉">🦉 Cú mèo bác học</option>
+            <option value="🐯">🐯 Hổ tia chớp</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeModal('add-student-modal')" class="pop-btn pop-btn-white px-4 py-2 rounded-xl text-xs font-black">Hủy</button>
+          <button type="submit" class="pop-btn pop-btn-green px-5 py-2 rounded-xl text-xs font-black">Thêm vào lớp</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 7: THÊM LỚP HỌC MỚI -->
+  <div id="add-class-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 border-2 border-slate-900 shadow-[0_12px_0_#1e293b] animate-pop">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-black text-slate-900">+ Tạo Lớp Học Mới</h3>
+        <button onclick="closeModal('add-class-modal')" class="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-100 text-slate-900 font-black">✕</button>
+      </div>
+      <form onsubmit="handleCreateClass(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-black text-slate-700 mb-1">Tên lớp học *</label>
+          <input id="new-class-name" type="text" required placeholder="VD: Lớp 12A1 - Toán Lý"
+            class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 text-sm font-black outline-none focus:border-slate-900" />
+        </div>
+        <div>
+          <label class="block text-xs font-black text-slate-700 mb-1">Phòng học / Ghi chú</label>
+          <input id="new-class-room" type="text" placeholder="VD: Phòng 401 - Nhà C"
+            class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 text-sm font-bold outline-none focus:border-slate-900" />
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeModal('add-class-modal')" class="pop-btn pop-btn-white px-4 py-2 rounded-xl text-xs font-black">Hủy</button>
+          <button type="submit" class="pop-btn pop-btn-yellow px-5 py-2 rounded-xl text-xs font-black">Tạo lớp học</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 8: NHẬP DANH SÁCH HỌC SINH HÀNG LOẠT
+       ======================================================================== -->
+  <div id="bulk-import-students-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 border-2 border-slate-900 shadow-[0_12px_0_#1e293b] max-h-[92vh] overflow-y-auto animate-pop">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <span class="text-xs font-black uppercase tracking-wider bg-amber-300 text-slate-900 border border-slate-900 px-3 py-0.5 rounded-full shadow-[0_2px_0_#1e293b]">
+            📥 Nhập Danh Sách Học Sinh Hàng Loạt
+          </span>
+          <h3 class="text-2xl font-black text-slate-900 mt-1">Dán hoặc tải lên danh sách học sinh</h3>
+        </div>
+        <button onclick="closeModal('bulk-import-students-modal')" class="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-100 hover:bg-slate-200 text-slate-900 font-black">✕</button>
+      </div>
+
+      <div class="p-3.5 rounded-2xl bg-amber-50 border-2 border-amber-300 text-xs font-bold text-amber-950 mb-4 space-y-1">
+        <div class="font-black text-sm">💡 Cú pháp hỗ trợ (mỗi học sinh 1 dòng):</div>
+        <div><code class="bg-white px-2 py-0.5 rounded font-black border border-amber-300">Họ và tên | Mã HS | Nhóm | Điểm ban đầu</code></div>
+        <div class="text-[11px] text-slate-600 mt-1">
+          • Hỗ trợ phân tách bằng dấu gạch đứng <code class="font-black">|</code>, dấu phẩy <code class="font-black">,</code> hoặc phím Tab khi copy từ Excel/Sheets.<br/>
+          • Nếu chỉ nhập <strong>Họ và tên</strong>, hệ thống sẽ tự động cấp Mã (HSxx), chia đều vào các Nhóm và gán Avatar con vật ngẫu nhiên!
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="fillSampleStudentsImport()"
+              class="pop-btn pop-btn-white px-3 py-1.5 rounded-xl text-xs font-black">
+              📋 Dán mẫu thử
+            </button>
+            <label class="pop-btn pop-btn-white px-3 py-1.5 rounded-xl text-xs font-black cursor-pointer inline-flex items-center gap-1.5">
+              📁 Tải file .txt / .csv
+              <input type="file" accept=".txt,.csv" onchange="handleStudentFileUpload(event)" class="hidden" />
+            </label>
+          </div>
+          <button type="button" onclick="clearBulkStudentInput()" class="text-xs font-bold text-slate-400 hover:text-rose-600">
+            Xóa nội dung
+          </button>
+        </div>
+
+        <div>
+          <textarea id="bulk-students-input" rows="7" oninput="previewBulkStudents()"
+            placeholder="Dán danh sách học sinh vào đây, ví dụ:&#10;Nguyễn Văn An | HS11 | Nhóm 1 | 10&#10;Trần Thị Bình | HS12 | Nhóm 2 | 10&#10;Lê Hoàng Cường&#10;Phạm Thu Dung"
+            class="w-full p-4 rounded-2xl border-2 border-slate-300 text-xs font-mono font-bold outline-none focus:border-slate-900 focus:bg-white bg-slate-50"></textarea>
+        </div>
+
+        <!-- Khung xem trước kết quả phân tích -->
+        <div id="bulk-students-preview-box" class="space-y-2">
+          <div class="flex items-center justify-between text-xs font-black text-slate-700">
+            <span>👁️ Xem trước kết quả:</span>
+            <span id="bulk-students-count-badge" class="px-2.5 py-0.5 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300">
+              0 học sinh
+            </span>
+          </div>
+          <div id="bulk-students-preview-list" class="max-h-48 overflow-y-auto space-y-1.5 p-2 bg-slate-50 rounded-2xl border-2 border-slate-200 text-xs">
+            <div class="text-slate-400 text-center py-3">Nhập danh sách học sinh vào ô phía trên để xem trước...</div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeModal('bulk-import-students-modal')"
+            class="pop-btn pop-btn-white px-5 py-2.5 rounded-xl text-xs font-black">
+            Hủy
+          </button>
+          <button type="button" id="btn-confirm-bulk-students" onclick="confirmBulkImportStudents()"
+            class="pop-btn pop-btn-green px-6 py-2.5 rounded-xl text-xs font-black">
+            ✅ Xác Nhận Thêm Vào Lớp
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 9: NHẬP HÀNG LOẠT CÂU HỎI SINH THẺ BÀI TỰ ĐỘNG
+       ======================================================================== -->
+  <div id="bulk-import-cards-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 border-2 border-slate-900 shadow-[0_12px_0_#1e293b] max-h-[92vh] overflow-y-auto animate-pop">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <span id="bulk-cards-modal-badge" class="text-xs font-black uppercase tracking-wider bg-amber-300 text-slate-900 border border-slate-900 px-3 py-0.5 rounded-full shadow-[0_2px_0_#1e293b]">
+            📥 Nhập Thẻ Hàng Loạt Tự Động
+          </span>
+          <h3 id="bulk-cards-modal-title" class="text-2xl font-black text-slate-900 mt-1">Nhập thẻ hàng loạt</h3>
+        </div>
+        <button onclick="closeModal('bulk-import-cards-modal')" class="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-100 hover:bg-slate-200 text-slate-900 font-black">✕</button>
+      </div>
+
+      <!-- Chọn loại thẻ mục tiêu -->
+      <div class="flex gap-2 mb-4 bg-slate-100 p-1.5 rounded-2xl border-2 border-slate-300">
+        <button type="button" id="bulk-card-type-power" onclick="setBulkCardImportType('power')"
+          class="flex-1 py-2 rounded-xl text-xs font-black transition bg-amber-400 text-slate-900 border-2 border-slate-900 shadow-[0_2px_0_#1e293b]">
+          ⚡ Thẻ Power Card (Đặc quyền khi đạt mốc Point Line)
+        </button>
+        <button type="button" id="bulk-card-type-penalty" onclick="setBulkCardImportType('penalty')"
+          class="flex-1 py-2 rounded-xl text-xs font-black transition text-slate-600">
+          🎯 Thẻ Challenge Card (Thử thách / Câu hỏi)
+        </button>
+      </div>
+
+      <div class="p-3.5 rounded-2xl bg-indigo-50 border-2 border-indigo-200 text-xs font-bold text-indigo-950 mb-4 space-y-1">
+        <div class="font-black text-sm">💡 Cú pháp hỗ trợ (mỗi thẻ 1 dòng):</div>
+        <div><code class="bg-white px-2 py-0.5 rounded font-black border border-indigo-200">Tên thẻ | Nội dung thẻ / thử thách</code></div>
+        <div class="text-[11px] text-slate-600 mt-1">
+          • Ví dụ: <code class="font-black">Hoãn kiểm tra | Được hoãn kiểm tra miệng 1 lần sang tiết sau</code><br/>
+          • Hoặc chỉ cần gõ nội dung thẻ, hệ thống sẽ tự sinh tên thẻ, mã code và <strong>tự động chọn phôi ảnh ngẫu nhiên</strong> từ 24 phôi ảnh (1.jpg - 24.jpg) trong folder Card/!
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="fillSampleCardsImport()"
+              class="pop-btn pop-btn-white px-3 py-1.5 rounded-xl text-xs font-black">
+              📋 Dán mẫu thẻ
+            </button>
+            <label class="pop-btn pop-btn-white px-3 py-1.5 rounded-xl text-xs font-black cursor-pointer inline-flex items-center gap-1.5">
+              📁 Tải file .txt / .csv
+              <input type="file" accept=".txt,.csv" onchange="handleCardFileUpload(event)" class="hidden" />
+            </label>
+          </div>
+          <button type="button" onclick="clearBulkCardInput()" class="text-xs font-bold text-slate-400 hover:text-rose-600">
+            Xóa nội dung
+          </button>
+        </div>
+
+        <div>
+          <textarea id="bulk-cards-input" rows="7" oninput="previewBulkCards()"
+            placeholder="Dán danh sách câu hỏi / thẻ vào đây, mỗi dòng 1 thẻ..."
+            class="w-full p-4 rounded-2xl border-2 border-slate-300 text-xs font-mono font-bold outline-none focus:border-slate-900 focus:bg-white bg-slate-50"></textarea>
+        </div>
+
+        <!-- Khung xem trước thẻ sẽ được sinh ra -->
+        <div id="bulk-cards-preview-box" class="space-y-2">
+          <div class="flex items-center justify-between text-xs font-black text-slate-700">
+            <span>👁️ Xem trước danh sách thẻ sẽ sinh:</span>
+            <span id="bulk-cards-count-badge" class="px-2.5 py-0.5 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300">
+              0 thẻ
+            </span>
+          </div>
+          <div id="bulk-cards-preview-list" class="max-h-52 overflow-y-auto space-y-2 p-2.5 bg-slate-50 rounded-2xl border-2 border-slate-200 text-xs">
+            <div class="text-slate-400 text-center py-3">Nhập danh sách câu hỏi vào ô trên để xem trước...</div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeModal('bulk-import-cards-modal')"
+            class="pop-btn pop-btn-white px-5 py-2.5 rounded-xl text-xs font-black">
+            Hủy
+          </button>
+          <button type="button" id="btn-confirm-bulk-cards" onclick="confirmBulkImportCards()"
+            class="pop-btn pop-btn-yellow px-6 py-2.5 rounded-xl text-xs font-black">
+            💾 Sinh & Lưu Vào Kho Thẻ
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast thông báo nổi -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+  <!-- Firebase SDKs (v10 compat CDN) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <!-- Scripts -->
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
