@@ -85,6 +85,117 @@ function resolveFrameUrl(path) {
   return clean || "1.jpg";
 }
 
+function extractClassShortCode(className) {
+  const raw = (className || "").trim();
+  // Tìm mã lớp phổ biến như 10A1, 11B2, 12C, 6A, 9B1...
+  const match = raw.match(/\b(\d{1,2}[A-Za-z]+\d*)\b/);
+  if (match) return match[1].toUpperCase();
+  // Bỏ dấu tiếng Việt và lấy ký tự chữ/số viết tắt
+  const noAccent = raw
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .replace(/^Lop\s+/i, "");
+  const words = noAccent.split(/[^A-Za-z0-9]+/).filter(Boolean);
+  if (words.length === 1 && words[0].length <= 6) {
+    return words[0].toUpperCase();
+  }
+  const initials = words.map((w) => w[0]).join("").toUpperCase();
+  return (initials || "LOP").slice(0, 6);
+}
+
+function generateNextStudentCode(cls, offset = 0) {
+  const prefix = extractClassShortCode(cls?.name || "LOP");
+  let maxNum = 0;
+  if (cls && Array.isArray(cls.students)) {
+    cls.students.forEach((s) => {
+      const m = (s.code || "").match(/(\d+)$/);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        if (n > maxNum) maxNum = n;
+      }
+    });
+  }
+  const nextNum = maxNum + 1 + offset;
+  return `${prefix}-${String(nextNum).padStart(2, "0")}`;
+}
+
+const STUDENT_PW_STORAGE_KEY = "CLASSJOY_STUDENT_PASSWORDS";
+
+function getSavedStudentPasswordsMap() {
+  try {
+    const raw = localStorage.getItem(STUDENT_PW_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveStudentPasswordToStore(student, newPassword) {
+  if (!student) return;
+  const map = getSavedStudentPasswordsMap();
+  const codeKey = (student.code || "").trim().toUpperCase();
+  const userKey = (student.username || student.code || "").trim().toLowerCase();
+  if (codeKey) map[codeKey] = String(newPassword);
+  if (userKey) map[userKey] = String(newPassword);
+  if (student.id) map[student.id] = String(newPassword);
+  try {
+    localStorage.setItem(STUDENT_PW_STORAGE_KEY, JSON.stringify(map));
+  } catch (e) {
+    console.warn("Không thể lưu mật khẩu học sinh vào bộ nhớ:", e);
+  }
+
+  // Đồng bộ mật khẩu mới vào tất cả các bản lưu trạng thái cục bộ (Demo & Giáo viên)
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k === "CLASSJOY_DEMO_STATE" || (k && k.startsWith("CLASSJOY_TEACHER_"))) {
+        const rawState = localStorage.getItem(k);
+        if (!rawState) continue;
+        const parsed = JSON.parse(rawState);
+        let changed = false;
+        if (Array.isArray(parsed.classes)) {
+          parsed.classes.forEach((c) => {
+            if (Array.isArray(c.students)) {
+              c.students.forEach((s) => {
+                const sCode = (s.code || "").trim().toUpperCase();
+                const sUser = (s.username || s.code || "").trim().toLowerCase();
+                if ((codeKey && sCode === codeKey) || (userKey && sUser === userKey) || (student.id && s.id === student.id)) {
+                  s.password = String(newPassword);
+                  changed = true;
+                }
+              });
+            }
+          });
+        }
+        if (changed) {
+          localStorage.setItem(k, JSON.stringify(parsed));
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Không thể đồng bộ mật khẩu sang các trạng thái lưu trữ:", e);
+  }
+}
+
+function applySavedStudentPasswords(state) {
+  if (!state || !Array.isArray(state.classes)) return;
+  const map = getSavedStudentPasswordsMap();
+  state.classes.forEach((cls) => {
+    if (Array.isArray(cls.students)) {
+      cls.students.forEach((st) => {
+        const codeKey = (st.code || "").trim().toUpperCase();
+        const userKey = (st.username || st.code || "").trim().toLowerCase();
+        const savedPw = map[st.id] || map[codeKey] || map[userKey];
+        if (savedPw) {
+          st.password = String(savedPw);
+        }
+      });
+    }
+  });
+}
+
 function sanitizeCardFrames(state) {
   if (!state) return;
   if (Array.isArray(state.powerCards)) {
@@ -95,8 +206,19 @@ function sanitizeCardFrames(state) {
   }
   if (Array.isArray(state.classes)) {
     state.classes.forEach((cls) => {
+      const prefix = extractClassShortCode(cls.name);
       if (Array.isArray(cls.students)) {
-        cls.students.forEach((st) => {
+        cls.students.forEach((st, idx) => {
+          // Chuẩn hóa mã HS cũ (HS01 -> 10A1-01) và tự động tạo tài khoản + mật khẩu mặc định 123456
+          if (!st.code || /^HS\d+$/i.test(st.code)) {
+            const numMatch = (st.code || "").match(/\d+/);
+            const num = numMatch ? parseInt(numMatch[0], 10) : idx + 1;
+            st.code = `${prefix}-${String(num).padStart(2, "0")}`;
+          }
+          st.username = (st.username || st.code).toLowerCase();
+          if (!st.password) {
+            st.password = "123456";
+          }
           if (Array.isArray(st.ownedCards)) {
             st.ownedCards.forEach((c) => {
               if (c.cardFrame) c.cardFrame = resolveFrameUrl(c.cardFrame);
@@ -106,6 +228,7 @@ function sanitizeCardFrames(state) {
       }
     });
   }
+  applySavedStudentPasswords(state);
 }
 
 function ensureUniqueClassIds(state, user) {
@@ -206,9 +329,23 @@ function findStudentById(studentId) {
 
 function findStudentByCode(code) {
   const normalized = (code || "").trim().toUpperCase();
+  if (!normalized) return null;
   for (const cls of appState.classes) {
-    const st = cls.students.find((s) => s.code.toUpperCase() === normalized);
+    const st = cls.students.find(
+      (s) =>
+        (s.code || "").toUpperCase() === normalized ||
+        (s.username || "").toUpperCase() === normalized
+    );
     if (st) return { student: st, classObj: cls };
+  }
+  // Hỗ trợ tìm kiếm tương thích nếu nhập HS01, HS02...
+  const hsMatch = normalized.match(/^HS0*(\d+)$/);
+  if (hsMatch && appState.classes.length > 0) {
+    const suffix = `-${String(parseInt(hsMatch[1], 10)).padStart(2, "0")}`;
+    for (const cls of appState.classes) {
+      const st = cls.students.find((s) => (s.code || "").toUpperCase().endsWith(suffix));
+      if (st) return { student: st, classObj: cls };
+    }
   }
   return null;
 }
@@ -738,8 +875,8 @@ async function logoutTeacher() {
   currentFirebaseUser = null;
   isDemoMode = false;
 
-  // Xóa sạch trạng thái trong RAM để tài khoản sau không bị dính dữ liệu của tài khoản trước!
-  appState = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  // Nạp lại trạng thái từ bộ nhớ lưu trữ (giữ nguyên mật khẩu học sinh đã đổi)
+  appState = loadState(null);
   sanitizeCardFrames(appState);
   currentClassId = appState.classes[0]?.id || "class-10a1";
   activeStudentModalId = null;
@@ -753,7 +890,7 @@ async function logoutTeacher() {
 function enterDemoMode() {
   isDemoMode = true;
   currentFirebaseUser = null;
-  appState = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  appState = loadState(null);
   sanitizeCardFrames(appState);
   currentClassId = appState.classes[0]?.id || "class-10a1";
   updateTeacherInfoUI("Cô Nguyễn Minh Anh (Demo)", "demo@classjoy.vn", null);
@@ -911,8 +1048,9 @@ document.addEventListener("DOMContentLoaded", () => {
     landingStudentForm.addEventListener("submit", (e) => {
       e.preventDefault();
       const code = document.getElementById("landing-student-code").value.trim();
+      const password = document.getElementById("landing-student-password")?.value.trim() || "123456";
       if (code) {
-        quickStudentLookup(code);
+        quickStudentLookup(code, password);
       }
     });
   }
@@ -972,21 +1110,31 @@ function togglePointLineCollapse() {
   }
 }
 
-function enterMainApp(mode, studentCode = "") {
+let currentAppRole = "teacher"; // 'teacher' | 'student'
+
+function enterMainApp(mode, studentCode = "", studentPassword = "123456") {
   document.getElementById("landing-screen").classList.add("hidden");
   document.getElementById("main-app").classList.remove("hidden");
 
   const roleBadge = document.getElementById("role-badge");
+  const navTabs = document.getElementById("teacher-nav-tabs");
   if (mode === "student") {
-    roleBadge.textContent = "Chế độ Học sinh tra cứu";
+    currentAppRole = "student";
+    if (navTabs) navTabs.classList.add("hidden");
+    roleBadge.textContent = "🎒 Học sinh (Chế độ xem thông tin)";
     roleBadge.className =
       "text-[11px] font-black px-3 py-1 rounded-full bg-amber-200 text-amber-950 border border-slate-900";
     switchMainTab("student-portal");
     if (studentCode) {
-      document.getElementById("portal-code-input").value = studentCode.toUpperCase();
-      renderStudentPortalProfile(studentCode);
+      const codeInput = document.getElementById("portal-code-input");
+      const pwInput = document.getElementById("portal-password-input");
+      if (codeInput) codeInput.value = studentCode.toLowerCase();
+      if (pwInput) pwInput.value = studentPassword;
+      renderStudentPortalProfile(studentCode, studentPassword, false);
     }
   } else {
+    currentAppRole = "teacher";
+    if (navTabs) navTabs.classList.remove("hidden");
     roleBadge.textContent = "Giáo viên";
     roleBadge.className =
       "text-[11px] font-black px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300";
@@ -996,12 +1144,101 @@ function enterMainApp(mode, studentCode = "") {
   }
 }
 
-function quickStudentLookup(code) {
-  if (!appState || !appState.classes || appState.classes.length === 0 || !findStudentByCode(code)) {
-    appState = JSON.parse(JSON.stringify(DEFAULT_DATA));
-    sanitizeCardFrames(appState);
+function fillAndLoginDemoStudent(code) {
+  const codeInput = document.getElementById("landing-student-code");
+  const pwInput = document.getElementById("landing-student-password");
+  if (codeInput) codeInput.value = code;
+  const enteredPw = pwInput?.value.trim() || "123456";
+  quickStudentLookup(code, enteredPw);
+}
+
+async function quickStudentLookup(code, password = "123456") {
+  const errBox = document.getElementById("student-login-error");
+  if (errBox) errBox.classList.add("hidden");
+
+  applySavedStudentPasswords(appState);
+  let found = findStudentByCode(code);
+
+  // Nếu chưa tìm thấy trong bộ nhớ cục bộ, thử tìm trên Firestore shared_classes
+  if (!found && firestoreDb) {
+    try {
+      const snap = await firestoreDb.collection("shared_classes").get();
+      snap.forEach((doc) => {
+        const data = doc.data();
+        if (data && Array.isArray(data.students)) {
+          const normalized = (code || "").trim().toUpperCase();
+          const matchSt = data.students.find(
+            (s) =>
+              (s.code || "").toUpperCase() === normalized ||
+              (s.username || "").toUpperCase() === normalized
+          );
+          if (matchSt) {
+            const clsObj = {
+              id: data.classId || doc.id,
+              name: data.className || "Lớp học",
+              groupsList: ["Nhóm 1", "Nhóm 2", "Nhóm 3", "Nhóm 4"],
+              students: data.students
+            };
+            const existingIdx = appState.classes.findIndex((c) => c.id === clsObj.id);
+            if (existingIdx >= 0) {
+              appState.classes[existingIdx] = clsObj;
+            } else {
+              appState.classes.push(clsObj);
+            }
+            if (data.powerCards) appState.powerCards = data.powerCards;
+            if (data.penaltyCards) appState.penaltyCards = data.penaltyCards;
+            if (data.pointLineMilestones) appState.pointLineMilestones = data.pointLineMilestones;
+            sanitizeCardFrames(appState);
+            found = findStudentByCode(code);
+          }
+        }
+      });
+    } catch (e) {
+      console.warn("Lỗi tìm học sinh trên Cloud:", e);
+    }
   }
-  enterMainApp("student", code);
+
+  // Nếu vẫn chưa thấy, nạp bộ dữ liệu mẫu DEFAULT_DATA để kiểm tra tài khoản demo
+  if (!found) {
+    const tempDefault = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    sanitizeCardFrames(tempDefault);
+    const normalized = (code || "").trim().toUpperCase();
+    for (const c of tempDefault.classes) {
+      const st = c.students.find(
+        (s) =>
+          (s.code || "").toUpperCase() === normalized ||
+          (s.username || "").toUpperCase() === normalized
+      );
+      if (st) {
+        appState = tempDefault;
+        found = { student: st, classObj: c };
+        break;
+      }
+    }
+  }
+
+  if (!found) {
+    if (errBox) {
+      errBox.textContent = `❌ Không tìm thấy tài khoản học sinh "${code}"!`;
+      errBox.classList.remove("hidden");
+    }
+    showToast(`❌ Không tìm thấy tài khoản học sinh "${code}"!`, "rose");
+    return;
+  }
+
+  applySavedStudentPasswords(appState);
+  const expectedPw = String(found.student.password || "123456");
+  if (String(password) !== expectedPw) {
+    if (errBox) {
+      errBox.textContent = "❌ Mật khẩu không chính xác! Vui lòng nhập mật khẩu mới đã đổi.";
+      errBox.classList.remove("hidden");
+    }
+    showToast("❌ Mật khẩu học sinh không chính xác!", "rose");
+    return;
+  }
+
+  updateTeacherInfoUI(found.student.name, `TK: ${(found.student.username || found.student.code).toLowerCase()}`, null);
+  enterMainApp("student", found.student.code, expectedPw);
 }
 
 function switchMainTab(tabName) {
@@ -2086,23 +2323,39 @@ function renderStudentDetailModalContent(studentId) {
   const isStudentRevealed = revealedStudentIds.has(student.id);
   const isEffectiveHidden = isGlobalHidden && !isStudentRevealed;
 
+  const studentUsername = (student.username || student.code || "").toLowerCase();
+
   const container = document.getElementById("student-modal-content");
   container.innerHTML = `
-    <!-- Header hồ sơ học sinh (Có nút cho phép giáo viên xem riêng điểm của học sinh này khi đang bật Ẩn điểm chung) -->
+    <!-- Header hồ sơ học sinh (Kèm quản lý Tài khoản & Mật khẩu cho Giáo viên) -->
     <div class="flex flex-wrap items-center justify-between gap-4 pb-5 border-b-2 border-slate-200">
       <div class="flex items-center gap-4">
         <div class="avatar-sticker w-16 h-16 rounded-3xl ${student.avatarBg} border-2 border-slate-900 flex items-center justify-center text-4xl shadow-[0_3px_0_#1e293b]">
           ${student.avatar}
         </div>
         <div>
-          <div class="flex items-center gap-2">
-            <span class="px-2.5 py-0.5 rounded-lg bg-amber-300 text-slate-900 font-black text-xs border border-slate-900">Mã: ${student.code}</span>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-lg bg-amber-300 text-slate-900 font-black text-xs border border-slate-900">Mã HS: ${student.code}</span>
+            <span class="px-2.5 py-0.5 rounded-lg bg-indigo-100 text-indigo-900 font-black text-xs border border-indigo-300">👤 TK: ${studentUsername}</span>
             <span class="text-xs font-bold text-slate-500">${classObj.name} • ${student.group}</span>
           </div>
           <h3 class="text-2xl font-black text-slate-900 mt-1">${student.name}</h3>
-          <p class="text-xs font-bold ${isEffectiveHidden ? "text-slate-400" : "text-emerald-700"} mt-0.5">
-            ${isEffectiveHidden ? "🙈 Điểm đang ẩn trên màn hình chiếu" : `Tăng tuần này: +${growth.weekGain}đ • Tăng tháng này: +${growth.monthGain}đ`}
-          </p>
+          <div class="flex flex-wrap items-center gap-2 mt-1">
+            <span class="text-xs font-bold ${isEffectiveHidden ? "text-slate-400" : "text-emerald-700"}">
+              ${isEffectiveHidden ? "🙈 Điểm đang ẩn trên màn hình chiếu" : `Tăng tuần: +${growth.weekGain}đ • Tăng tháng: +${growth.monthGain}đ`}
+            </span>
+            <span class="text-slate-300">|</span>
+            <button type="button" onclick="teacherChangeStudentPassword('${student.id}')"
+              class="px-2 py-0.5 rounded-lg bg-white hover:bg-amber-100 border border-slate-900 text-[11px] font-black text-slate-800 shadow-[0_1px_0_#1e293b]"
+              title="Giáo viên đặt mật khẩu mới cho học sinh này">
+              ✏️ Đổi MK
+            </button>
+            <button type="button" onclick="teacherResetStudentPassword('${student.id}')"
+              class="px-2 py-0.5 rounded-lg bg-white hover:bg-emerald-100 border border-slate-900 text-[11px] font-black text-emerald-800 shadow-[0_1px_0_#1e293b]"
+              title="Khôi phục mật khẩu của học sinh về mặc định 123456">
+              🔄 Reset 123456
+            </button>
+          </div>
         </div>
       </div>
 
@@ -3426,8 +3679,8 @@ function renderPortalQuickCodes() {
   const wrapper = document.getElementById("portal-quick-codes-wrapper");
   if (!container) return;
 
-  // Chỉ hiện danh sách chọn nhanh nếu Giáo viên đang đăng nhập thực tế hoặc đang ở chế độ Demo
-  if (!currentFirebaseUser && !isDemoMode) {
+  // Chỉ hiện danh sách chọn nhanh nếu Giáo viên đang ở chế độ Giáo viên
+  if ((!currentFirebaseUser && !isDemoMode) || currentAppRole === "student") {
     if (wrapper) wrapper.classList.add("hidden");
     container.innerHTML = "";
     return;
@@ -3450,7 +3703,7 @@ function renderPortalQuickCodes() {
       (s) => `
       <button type="button" onclick="selectQuickPortalCode('${s.code}')"
         class="px-3 py-1.5 rounded-xl bg-white border-2 border-slate-900 shadow-[0_2px_0_#1e293b] hover:bg-amber-100 text-xs font-black text-slate-800 transition">
-        ${s.avatar} ${s.code} - ${s.name}
+        ${s.avatar} ${(s.username || s.code).toLowerCase()} - ${s.name}
       </button>
     `
     )
@@ -3458,34 +3711,51 @@ function renderPortalQuickCodes() {
 }
 
 function selectQuickPortalCode(code) {
-  const input = document.getElementById("portal-code-input");
-  if (input) input.value = code;
-  renderStudentPortalProfile(code);
+  const found = findStudentByCode(code);
+  const codeInput = document.getElementById("portal-code-input");
+  const pwInput = document.getElementById("portal-password-input");
+  if (codeInput) codeInput.value = found ? (found.student.username || found.student.code).toLowerCase() : code;
+  if (pwInput && found) pwInput.value = found.student.password || "123456";
+  renderStudentPortalProfile(code, found ? (found.student.password || "123456") : "123456", true);
 }
 
 function handleStudentPortalSearch(e) {
   e.preventDefault();
   const code = document.getElementById("portal-code-input").value.trim();
-  renderStudentPortalProfile(code);
+  const password = document.getElementById("portal-password-input")?.value.trim() || "123456";
+  renderStudentPortalProfile(code, password, false);
 }
 
-function renderStudentPortalProfile(code) {
+function renderStudentPortalProfile(code, password = "123456", skipPasswordCheck = false) {
   const resultBox = document.getElementById("student-portal-result");
   if (!resultBox) return;
 
+  applySavedStudentPasswords(appState);
   const found = findStudentByCode(code);
   if (!found) {
     resultBox.innerHTML = `
       <div class="bg-white rounded-3xl p-8 text-center border-2 border-rose-400 shadow-[0_4px_0_#f43f5e]">
         <div class="text-4xl mb-2">❌</div>
-        <h3 class="text-lg font-black text-slate-900">Không tìm thấy Mã Code "${code.toUpperCase()}"</h3>
-        <p class="text-xs font-bold text-slate-500 mt-1">Vui lòng kiểm tra lại mã học sinh (ví dụ: HS01, HS02, HS03...)</p>
+        <h3 class="text-lg font-black text-slate-900">Không tìm thấy Tài khoản / Mã HS "${code}"</h3>
+        <p class="text-xs font-bold text-slate-500 mt-1">Vui lòng kiểm tra lại tài khoản theo quy luật [MãLớp]-[STT] (ví dụ: 10a1-01, 10a1-02...)</p>
       </div>
     `;
     return;
   }
 
   const { student, classObj } = found;
+  const expectedPw = String(student.password || "123456");
+  if (!skipPasswordCheck && String(password) !== expectedPw) {
+    resultBox.innerHTML = `
+      <div class="bg-white rounded-3xl p-8 text-center border-2 border-rose-400 shadow-[0_4px_0_#f43f5e]">
+        <div class="text-4xl mb-2">🔐</div>
+        <h3 class="text-lg font-black text-slate-900">Mật khẩu không chính xác!</h3>
+        <p class="text-xs font-bold text-slate-500 mt-1">Vui lòng nhập đúng mật khẩu mới đã đổi. Nếu em quên mật khẩu, hãy nhờ thầy/cô bấm nút Reset mật khẩu nhé!</p>
+      </div>
+    `;
+    showToast("❌ Sai mật khẩu tài khoản học sinh!", "rose");
+    return;
+  }
 
   // Lắng nghe đồng bộ thời gian thực từ Firestore (Real-time Cloud Sync cho điện thoại học sinh)
   if (firestoreDb && classObj && (!studentPortalLiveUnsub || studentPortalLiveClassId !== classObj.id)) {
@@ -3500,7 +3770,7 @@ function renderStudentPortalProfile(code) {
           if (cloudData.penaltyCards) appState.penaltyCards = cloudData.penaltyCards;
           if (cloudData.pointLineMilestones) appState.pointLineMilestones = cloudData.pointLineMilestones;
           if (typeof cloudData.isPointsHidden !== "undefined") appState.isPointsHidden = cloudData.isPointsHidden;
-          
+          sanitizeCardFrames(appState);
           const updatedFound = findStudentByCode(code);
           if (updatedFound) {
             renderStudentPortalProfileHtml(updatedFound.student, updatedFound.classObj);
@@ -3521,6 +3791,7 @@ function renderStudentPortalProfileHtml(student, classObj) {
   const unusedChallengeCards = student.ownedCards.filter((c) => c.type === "penalty" && c.status === "unused");
   const usedCards = student.ownedCards.filter((c) => c.status === "used");
   const growth = calculateStudentGrowth(student);
+  const studentUsername = (student.username || student.code || "").toLowerCase();
 
   const milestones = [...appState.pointLineMilestones].sort((a, b) => a.threshold - b.threshold);
   let nextMilestone = milestones.find((m) => m.threshold > student.points) || milestones[milestones.length - 1];
@@ -3528,7 +3799,7 @@ function renderStudentPortalProfileHtml(student, classObj) {
   const studentNumberLineHtml = buildNumberLineHtml(milestones, student.points, student.avatar);
 
   resultBox.innerHTML = `
-    <!-- Thẻ thông tin cá nhân Học sinh -->
+    <!-- Thẻ thông tin cá nhân Học sinh (Chế độ chỉ đọc + Nút đổi mật khẩu cá nhân) -->
     <div class="bg-amber-400 rounded-3xl p-6 sm:p-8 text-slate-900 border-2 border-slate-900 shadow-[0_8px_0_#1e293b] flex flex-col sm:flex-row items-center justify-between gap-6">
       <div class="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
         <div class="avatar-sticker w-24 h-24 rounded-3xl bg-white border-2 border-slate-900 flex items-center justify-center text-6xl shadow-[0_4px_0_#1e293b]">
@@ -3536,13 +3807,20 @@ function renderStudentPortalProfileHtml(student, classObj) {
         </div>
         <div>
           <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
-            <span class="px-3.5 py-1 rounded-full bg-slate-900 text-white font-black text-xs">MÃ CODE: ${student.code}</span>
-            <span class="px-3 py-1 rounded-full bg-white border-2 border-slate-900 text-slate-900 font-black text-xs shadow-[0_2px_0_#1e293b]">${classObj.name} • ${student.group}</span>
+            <span class="px-3 py-1 rounded-full bg-slate-900 text-white font-black text-xs">👤 TK: ${studentUsername}</span>
+            <span class="px-3 py-1 rounded-full bg-white border-2 border-slate-900 text-slate-900 font-black text-xs shadow-[0_2px_0_#1e293b]">MÃ HS: ${student.code}</span>
+            <span class="px-3 py-1 rounded-full bg-emerald-100 border-2 border-slate-900 text-emerald-950 font-black text-xs">${classObj.name} • ${student.group}</span>
           </div>
           <h3 class="text-2xl sm:text-3xl font-black">${student.name}</h3>
-          <p class="text-xs font-bold text-slate-800 mt-1">
-            Tăng tuần này: <strong>+${growth.weekGain}đ</strong> • Tăng tháng này: <strong>+${growth.monthGain}đ</strong>
-          </p>
+          <div class="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-1.5">
+            <span class="text-xs font-bold text-slate-800">
+              Tăng tuần này: <strong>+${growth.weekGain}đ</strong> • Tăng tháng này: <strong>+${growth.monthGain}đ</strong>
+            </span>
+            <button type="button" onclick="openStudentChangePasswordModal('${student.id}')"
+              class="pop-btn pop-btn-white px-3 py-1 rounded-xl text-xs font-black flex items-center gap-1">
+              🔐 Đổi mật khẩu
+            </button>
+          </div>
         </div>
       </div>
 
@@ -3702,11 +3980,142 @@ function renderStudentPortalProfileHtml(student, classObj) {
 // ----------------------------------------------------------------------------
 // 15. THÊM HỌC SINH MỚI & THÊM LỚP HỌC MỚI
 // ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// 14B. QUẢN LÝ MẬT KHẨU HỌC SINH (HỌC SINH TỰ ĐỔI & GIÁO VIÊN ĐỔI / RESET)
+// ----------------------------------------------------------------------------
+function syncSingleClassToCloud(classObj) {
+  if (firestoreDb && classObj) {
+    firestoreDb.collection("shared_classes").doc(classObj.id).set({
+      classId: classObj.id,
+      className: classObj.name,
+      students: classObj.students || [],
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true }).catch((e) => console.warn("Lỗi đồng bộ mật khẩu lên shared_classes:", e));
+  }
+}
+
+function openStudentChangePasswordModal(studentId) {
+  const found = findStudentById(studentId);
+  if (!found) return;
+  document.getElementById("change-pw-student-id").value = studentId;
+  document.getElementById("student-old-password").value = "";
+  document.getElementById("student-new-password").value = "";
+  document.getElementById("student-confirm-password").value = "";
+  const errEl = document.getElementById("change-pw-error");
+  if (errEl) errEl.classList.add("hidden");
+  document.getElementById("student-change-password-modal").classList.remove("hidden");
+}
+
+function handleStudentChangePassword(e) {
+  e.preventDefault();
+  const studentId = document.getElementById("change-pw-student-id").value;
+  const oldPw = document.getElementById("student-old-password").value.trim();
+  const newPw = document.getElementById("student-new-password").value.trim();
+  const confirmPw = document.getElementById("student-confirm-password").value.trim();
+  const errEl = document.getElementById("change-pw-error");
+  if (errEl) errEl.classList.add("hidden");
+
+  applySavedStudentPasswords(appState);
+  const found = findStudentById(studentId);
+  if (!found) return;
+  const { student, classObj } = found;
+  const currentPw = String(student.password || "123456");
+
+  if (oldPw !== currentPw) {
+    if (errEl) {
+      errEl.textContent = "❌ Mật khẩu hiện tại không đúng!";
+      errEl.classList.remove("hidden");
+    }
+    return;
+  }
+  if (newPw.length < 4) {
+    if (errEl) {
+      errEl.textContent = "⚠️ Mật khẩu mới phải có ít nhất 4 ký tự!";
+      errEl.classList.remove("hidden");
+    }
+    return;
+  }
+  if (newPw !== confirmPw) {
+    if (errEl) {
+      errEl.textContent = "⚠️ Mật khẩu xác nhận không khớp!";
+      errEl.classList.remove("hidden");
+    }
+    return;
+  }
+
+  student.password = newPw;
+  saveStudentPasswordToStore(student, newPw);
+  saveState();
+  syncSingleClassToCloud(classObj);
+
+  const pwInput = document.getElementById("portal-password-input");
+  if (pwInput) pwInput.value = newPw;
+  const landingPwInput = document.getElementById("landing-student-password");
+  if (landingPwInput) landingPwInput.value = newPw;
+
+  closeModal("student-change-password-modal");
+  renderStudentPortalProfileHtml(student, classObj);
+  showToast("🔐 Đã đổi mật khẩu thành công! Mật khẩu cũ đã vô hiệu hóa.", "emerald");
+}
+
+function teacherChangeStudentPassword(studentId) {
+  applySavedStudentPasswords(appState);
+  const found = findStudentById(studentId);
+  if (!found) return;
+  const { student, classObj } = found;
+  const newPw = prompt(
+    `Nhập mật khẩu mới cho học sinh ${student.name} (TK: ${(student.username || student.code).toLowerCase()}):`,
+    ""
+  );
+  if (newPw === null) return;
+  const cleanPw = newPw.trim();
+  if (!cleanPw) {
+    showToast("⚠️ Mật khẩu không được để trống!", "rose");
+    return;
+  }
+  student.password = cleanPw;
+  saveStudentPasswordToStore(student, cleanPw);
+  saveState();
+  syncSingleClassToCloud(classObj);
+  if (activeStudentModalId === studentId) {
+    renderStudentDetailModalContent(studentId);
+  }
+  showToast(`🔑 Đã cập nhật mật khẩu mới cho ${student.name}!`, "emerald");
+}
+
+function teacherResetStudentPassword(studentId) {
+  const found = findStudentById(studentId);
+  if (!found) return;
+  const { student, classObj } = found;
+  student.password = "123456";
+  saveStudentPasswordToStore(student, "123456");
+  saveState();
+  syncSingleClassToCloud(classObj);
+  if (activeStudentModalId === studentId) {
+    renderStudentDetailModalContent(studentId);
+  }
+  showToast(`🔄 Đã đặt lại mật khẩu của ${student.name} về mặc định: 123456`, "indigo");
+}
+
+// ----------------------------------------------------------------------------
+// 15. THÊM HỌC SINH MỚI & THÊM LỚP HỌC MỚI
+// ----------------------------------------------------------------------------
+function updateNewStudentAccountPreview() {
+  const codeVal = (document.getElementById("new-student-code")?.value || "").trim();
+  const previewEl = document.getElementById("new-student-username-preview");
+  if (previewEl) {
+    previewEl.textContent = (codeVal || "10a1-01").toLowerCase();
+  }
+}
+
 function openAddStudentModal() {
   document.getElementById("new-student-name").value = "";
   const cls = getCurrentClass();
-  const nextNum = (cls ? cls.students.length : 0) + 1;
-  document.getElementById("new-student-code").value = `HS${String(nextNum).padStart(2, "0")}`;
+  const autoCode = generateNextStudentCode(cls, 0);
+  document.getElementById("new-student-code").value = autoCode;
+  const pwInput = document.getElementById("new-student-password");
+  if (pwInput) pwInput.value = "123456";
+  updateNewStudentAccountPreview();
 
   const groupSelect = document.getElementById("new-student-group");
   if (groupSelect && cls) {
@@ -3726,12 +4135,16 @@ function handleCreateStudent(e) {
 
   const name = document.getElementById("new-student-name").value.trim();
   const code = document.getElementById("new-student-code").value.trim().toUpperCase();
+  const password = (document.getElementById("new-student-password")?.value || "123456").trim() || "123456";
+  const username = code.toLowerCase();
   const group = document.getElementById("new-student-group").value;
   const avatar = document.getElementById("new-student-avatar").value;
 
   cls.students.push({
     id: "st-" + Date.now(),
     code,
+    username,
+    password,
     name,
     group,
     avatar,
@@ -3745,7 +4158,7 @@ function handleCreateStudent(e) {
   saveState();
   renderAll();
   closeModal("add-student-modal");
-  showToast(`🎉 Đã thêm học sinh ${name} (Mã: ${code}) vào ${cls.name}!`, "emerald");
+  showToast(`🎉 Đã thêm ${name} (TK: ${username} / MK: ${password})!`, "emerald");
 }
 
 function openAddClassModal() {
@@ -3778,7 +4191,7 @@ function handleCreateClass(e) {
 }
 
 // ----------------------------------------------------------------------------
-// 15B. NHẬP DANH SÁCH HỌC SINH HÀNG LOẠT
+// 15B. NHẬP DANH SÁCH HỌC SINH HÀNG LOẠT (HỖ TRỢ FILE EXCEL .XLSX, .XLS, .CSV)
 // ----------------------------------------------------------------------------
 function openBulkImportStudentsModal() {
   const input = document.getElementById("bulk-students-input");
@@ -3794,15 +4207,18 @@ function clearBulkStudentInput() {
 }
 
 function fillSampleStudentsImport() {
+  const cls = getCurrentClass();
+  const c1 = generateNextStudentCode(cls, 0);
+  const c2 = generateNextStudentCode(cls, 1);
+  const c3 = generateNextStudentCode(cls, 2);
+  const c4 = generateNextStudentCode(cls, 3);
   const sample = [
-    "Nguyễn Hoàng Nam | HS11 | Nhóm 1 | 10",
-    "Trần Bảo An | HS12 | Nhóm 2 | 10",
-    "Lê Thu Thảo | HS13 | Nhóm 3 | 10",
-    "Phạm Minh Đức | HS14 | Nhóm 4 | 10",
+    `Nguyễn Hoàng Nam | ${c1} | Nhóm 1 | 10 | 123456`,
+    `Trần Bảo An | ${c2} | Nhóm 2 | 10 | 123456`,
+    `Lê Thu Thảo | ${c3} | Nhóm 3 | 10 | 123456`,
+    `Phạm Minh Đức | ${c4} | Nhóm 4 | 10 | 123456`,
     "Vũ Quỳnh Chi",
-    "Hoàng Gia Huy",
-    "Đặng Tuấn Anh | HS17 | Nhóm 1 | 12",
-    "Bùi Mai Phương | HS18 | Nhóm 2 | 10"
+    "Hoàng Gia Huy"
   ].join("\n");
 
   const input = document.getElementById("bulk-students-input");
@@ -3812,9 +4228,175 @@ function fillSampleStudentsImport() {
   }
 }
 
+function downloadStudentExcelTemplate() {
+  const cls = getCurrentClass();
+  const prefix = extractClassShortCode(cls?.name || "10A1");
+  const rows = [
+    ["Họ và tên", "Mã học sinh (Để trống tự sinh)", "Nhóm / Tổ", "Điểm ban đầu", "Mật khẩu (Mặc định 123456)"],
+    ["Nguyễn Hoàng Nam", `${prefix}-01`, "Nhóm 1", 10, "123456"],
+    ["Trần Bảo An", `${prefix}-02`, "Nhóm 2", 10, "123456"],
+    ["Lê Thu Thảo", "", "Nhóm 3", 10, "123456"],
+    ["Phạm Minh Đức", "", "Nhóm 4", 10, "123456"]
+  ];
+  if (typeof XLSX !== "undefined") {
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws["!cols"] = [{ wch: 24 }, { wch: 28 }, { wch: 15 }, { wch: 15 }, { wch: 26 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "DanhSachHocSinh");
+    XLSX.writeFile(wb, `Mau_Danh_Sach_Hoc_Sinh_${prefix}.xlsx`);
+    showToast("📥 Đã tải xuống file Excel mẫu danh sách học sinh!", "emerald");
+  } else {
+    showToast("⚠️ Thư viện Excel đang tải, vui lòng thử lại sau giây lát!", "amber");
+  }
+}
+
+function isGroupValue(val, existingGroups = []) {
+  if (!val) return false;
+  const clean = String(val).trim();
+  if (!clean) return false;
+  // Khớp "Nhóm 1", "nhóm 2", "Nhom 1", "Tổ 1", "To 2", "Group 1", "Đội 1", "Team 1", "Tổ A", "Nhóm B"...
+  if (/^(nhóm|nhom|tổ|to|group|team|đội|doi)\b/i.test(clean)) return true;
+  if (Array.isArray(existingGroups) && existingGroups.some((g) => g && g.trim().toLowerCase() === clean.toLowerCase())) {
+    return true;
+  }
+  return false;
+}
+
 function handleStudentFileUpload(e) {
   const file = e.target.files?.[0];
   if (!file) return;
+  const ext = (file.name.split(".").pop() || "").toLowerCase();
+
+  if ((ext === "xlsx" || ext === "xls" || ext === "csv") && typeof XLSX !== "undefined") {
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      try {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
+
+        if (!rows || rows.length === 0) {
+          showToast("⚠️ File Excel không có dữ liệu!", "rose");
+          return;
+        }
+
+        // 1. Phân tích dòng tiêu đề (nếu có) để nhận diện chính xác các cột
+        let headerRowIdx = -1;
+        let colName = -1;
+        let colCode = -1;
+        let colGroup = -1;
+        let colPoints = -1;
+        let colPass = -1;
+
+        for (let r = 0; r < Math.min(5, rows.length); r++) {
+          const row = rows[r];
+          if (!Array.isArray(row)) continue;
+          for (let c = 0; c < row.length; c++) {
+            const val = String(row[c] ?? "").trim().toLowerCase();
+            if (!val) continue;
+            if (colName === -1 && /^(họ\s*và\s*tên|họ\s*tên|tên\s*học\s*sinh|tên|name|full\s*name)$/i.test(val)) {
+              colName = c;
+              headerRowIdx = r;
+            } else if (colCode === -1 && /^(mã\s*học\s*sinh|mã\s*hs|mã|code|tài\s*khoản|username)/i.test(val)) {
+              colCode = c;
+              headerRowIdx = r;
+            } else if (colGroup === -1 && /^(nhóm|nhóm\s*\/\s*tổ|tổ|group|team|đội)/i.test(val)) {
+              colGroup = c;
+              headerRowIdx = r;
+            } else if (colPoints === -1 && /^(điểm|điểm\s*ban\s*đầu|điểm\s*thưởng|points|score)/i.test(val)) {
+              colPoints = c;
+              headerRowIdx = r;
+            } else if (colPass === -1 && /^(mật\s*khẩu|mk|password|pass)/i.test(val)) {
+              colPass = c;
+              headerRowIdx = r;
+            }
+          }
+          if (colName !== -1) break;
+        }
+
+        const lines = [];
+        const startRow = headerRowIdx >= 0 ? headerRowIdx + 1 : 0;
+
+        for (let r = startRow; r < rows.length; r++) {
+          const row = rows[r];
+          if (!Array.isArray(row) || row.length === 0) continue;
+
+          let name = "";
+          let code = "";
+          let group = "";
+          let pts = "";
+          let pw = "";
+
+          if (colName !== -1) {
+            // Nhận diện theo cột header đã tìm thấy
+            name = String(row[colName] ?? "").trim();
+            code = colCode !== -1 ? String(row[colCode] ?? "").trim() : "";
+            group = colGroup !== -1 ? String(row[colGroup] ?? "").trim() : "";
+            pts = colPoints !== -1 ? String(row[colPoints] ?? "").trim() : "";
+            pw = colPass !== -1 ? String(row[colPass] ?? "").trim() : "";
+          } else {
+            // Không có header rõ ràng: tự động nhận diện theo vị trí cột
+            const col0 = String(row[0] ?? "").trim();
+            const col1 = String(row[1] ?? "").trim();
+            const col2 = String(row[2] ?? "").trim();
+            const col3 = String(row[3] ?? "").trim();
+            const col4 = String(row[4] ?? "").trim();
+            const col5 = String(row[5] ?? "").trim();
+
+            if (!col0 && !col1) continue;
+
+            // Nếu cột 0 là STT (1, 2, 3...) và cột 1 là Họ tên
+            if (/^\d+$/.test(col0) && col1 && !/^\d+$/.test(col1)) {
+              name = col1;
+              code = col2;
+              group = col3;
+              pts = col4;
+              pw = col5;
+            } else {
+              name = col0;
+              code = col1;
+              group = col2;
+              pts = col3;
+              pw = col4;
+            }
+
+            // Kiểm tra thông minh: nếu ô code thực chất là tên Nhóm (ví dụ "Nhóm 1", "Nhóm 2", "Tổ 1"...)
+            if (isGroupValue(code)) {
+              if (!group) group = code;
+              code = "";
+            }
+          }
+
+          if (!name) continue;
+          // Bỏ qua nếu là dòng tiêu đề lặp lại
+          if (/^(họ\s*và\s*tên|họ\s*tên|tên\s*học\s*sinh|name|stt)$/i.test(name)) continue;
+
+          // Nếu code là placeholder text như "Để trống", "(để trống tự sinh)", "Tự sinh" -> coi như rỗng
+          if (/^(để\s*trống|tự\s*sinh|auto|none|trống|-|_)$/i.test(code)) {
+            code = "";
+          }
+
+          // Giữ nguyên đúng vị trí 5 cột, nếu mã để trống thì để trống giữa 2 dấu gạch đứng để không bị đẩy sang nhóm!
+          lines.push(`${name} | ${code} | ${group} | ${pts || 10} | ${pw || "123456"}`);
+        }
+
+        const input = document.getElementById("bulk-students-input");
+        if (input) {
+          input.value = lines.join("\n");
+          previewBulkStudents();
+        }
+        showToast(`📊 Đã đọc ${lines.length} học sinh từ file Excel "${file.name}"!`, "emerald");
+      } catch (err) {
+        console.error("Excel read error:", err);
+        showToast("❌ Không thể đọc file Excel này. Vui lòng kiểm tra định dạng!", "rose");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = "";
+    return;
+  }
+
   const reader = new FileReader();
   reader.onload = function(evt) {
     const text = evt.target.result || "";
@@ -3839,15 +4421,41 @@ function parseStudentImportText(text) {
     ? cls.groupsList
     : ["Nhóm 1", "Nhóm 2", "Nhóm 3", "Nhóm 4"];
 
-  // Tìm số thứ tự HS lớn nhất hiện tại để tự sinh mã tiếp theo
-  let maxCodeNum = 0;
-  cls.students.forEach((s) => {
-    const m = (s.code || "").match(/\d+/);
-    if (m) {
-      const n = parseInt(m[0], 10);
-      if (n > maxCodeNum) maxCodeNum = n;
+  const classPrefix = extractClassShortCode(cls?.name || "10A1");
+
+  // Thu thập các mã code đã tồn tại để tránh trùng lặp
+  const usedCodes = new Set();
+  if (Array.isArray(cls.students)) {
+    cls.students.forEach((s) => {
+      if (s.code) usedCodes.add(s.code.toUpperCase());
+    });
+  }
+
+  // Thu thập các mã code được người dùng chỉ định rõ ràng trong danh sách import
+  lines.forEach((line) => {
+    let parts = [];
+    if (line.includes("|")) parts = line.split("|").map((p) => p.trim());
+    else if (line.includes("\t")) parts = line.split("\t").map((p) => p.trim());
+    else if (line.includes(",")) parts = line.split(",").map((p) => p.trim());
+    else parts = [line];
+
+    const rawCode = (parts[1] || "").trim();
+    if (rawCode && !isGroupValue(rawCode, existingGroups) && !/^(để\s*trống|tự\s*sinh|auto|none|trống|-|_)$/i.test(rawCode)) {
+      usedCodes.add(rawCode.toUpperCase());
     }
   });
+
+  function getNextAvailableCode() {
+    let num = 1;
+    while (true) {
+      const candidate = `${classPrefix}-${String(num).padStart(2, "0")}`;
+      if (!usedCodes.has(candidate.toUpperCase())) {
+        usedCodes.add(candidate.toUpperCase());
+        return candidate;
+      }
+      num++;
+    }
+  }
 
   const avatarPool = ["🦖", "🦄", "🦊", "🐼", "🦁", "🐰", "🦉", "🐯", "🐲", "🦋", "🦅", "🐱", "🐬", "🐨", "🐶"];
   const bgPool = [
@@ -3855,7 +4463,6 @@ function parseStudentImportText(text) {
     "bg-violet-100", "bg-fuchsia-100", "bg-orange-100", "bg-teal-100"
   ];
 
-  let nextNum = maxCodeNum + 1;
   const parsed = [];
 
   lines.forEach((line, idx) => {
@@ -3871,27 +4478,50 @@ function parseStudentImportText(text) {
     }
 
     const name = parts[0] || "";
-    if (!name) return;
+    if (!name || /^(họ\s*và\s*tên|họ\s*tên|tên\s*học\s*sinh|name|stt)$/i.test(name)) return;
 
-    let code = (parts[1] || "").toUpperCase();
-    if (!code) {
-      code = `HS${String(nextNum++).padStart(2, "0")}`;
+    let code = (parts[1] || "").trim();
+    let group = (parts[2] || "").trim();
+    let ptsRaw = parts[3];
+    let pwRaw = parts[4];
+
+    // Phát hiện nếu cột 1 thực chất là Tên Nhóm (do để trống mã học sinh hoặc file thiếu cột mã)
+    if (isGroupValue(code, existingGroups)) {
+      if (!group) group = code;
+      // Dịch các cột sau lại đúng vị trí
+      if (typeof ptsRaw === "undefined" && parts[2]) ptsRaw = parts[2];
+      if (typeof pwRaw === "undefined" && parts[3]) pwRaw = parts[3];
+      code = "";
+    } else if (/^(để\s*trống|tự\s*sinh|auto|none|trống|-|_)$/i.test(code)) {
+      code = "";
     }
 
-    let group = parts[2] || "";
+    // Nếu mã học sinh để trống -> tự động sinh mã theo quy luật [MãLớp]-[STT] (VD: 10A1-01, 10A1-02...)
+    if (!code) {
+      code = getNextAvailableCode();
+    } else {
+      code = code.toUpperCase();
+      usedCodes.add(code);
+    }
+    const username = code.toLowerCase();
+
+    // Nếu không có nhóm, tự động phân bổ vòng tròn vào các nhóm của lớp
     if (!group) {
       group = existingGroups[idx % existingGroups.length];
     }
 
-    let points = parseInt(parts[3], 10);
+    let points = parseInt(ptsRaw, 10);
     if (isNaN(points)) points = 10;
 
+    const password = (pwRaw || "123456").trim() || "123456";
     const avatar = avatarPool[idx % avatarPool.length];
     const avatarBg = bgPool[idx % bgPool.length];
 
     parsed.push({
       name,
       code,
+      username,
+      password,
       group,
       points,
       avatar,
@@ -3918,7 +4548,7 @@ function previewBulkStudents() {
 
   if (list) {
     if (parsed.length === 0) {
-      list.innerHTML = `<div class="text-slate-400 text-center py-4 font-bold italic">Chưa có học sinh nào. Hãy dán danh sách hoặc bấm "📋 Dán mẫu thử".</div>`;
+      list.innerHTML = `<div class="text-slate-400 text-center py-4 font-bold italic">Chưa có học sinh nào. Hãy tải file Excel (.xlsx) lên hoặc bấm "📋 Dán mẫu thử".</div>`;
       return;
     }
 
@@ -3935,7 +4565,9 @@ function previewBulkStudents() {
             </span>
             <div class="min-w-0">
               <div class="font-black text-xs text-slate-900 truncate">${st.name}</div>
-              <div class="text-[11px] font-bold text-slate-500">Mã: <strong class="text-slate-800">${st.code}</strong> • Nhóm: <strong class="text-indigo-700">${st.group}</strong></div>
+              <div class="text-[11px] font-bold text-slate-500">
+                👤 TK: <strong class="text-indigo-700">${st.username}</strong> • ${st.group}
+              </div>
             </div>
           </div>
           <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-300 font-black text-xs shrink-0">
@@ -3961,7 +4593,6 @@ function confirmBulkImportStudents() {
   if (!cls) return;
 
   parsed.forEach((st) => {
-    // Nếu có tên nhóm mới chưa có trong groupsList thì thêm vào
     if (st.group && !cls.groupsList.includes(st.group)) {
       cls.groupsList.push(st.group);
     }
@@ -3969,6 +4600,8 @@ function confirmBulkImportStudents() {
     cls.students.push({
       id: "st-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
       code: st.code,
+      username: st.username,
+      password: st.password || "123456",
       name: st.name,
       group: st.group,
       avatar: st.avatar,
@@ -3977,7 +4610,7 @@ function confirmBulkImportStudents() {
       speechCount: 0,
       ownedCards: [],
       history: [
-        { time: nowTimeString(), daysAgo: 0, text: `Thêm từ danh sách hàng loạt (+${st.points}đ)`, delta: st.points }
+        { time: nowTimeString(), daysAgo: 0, text: `Tạo tài khoản & nhập danh sách (+${st.points}đ)`, delta: st.points }
       ]
     });
   });
@@ -3986,11 +4619,11 @@ function confirmBulkImportStudents() {
   renderAll();
   closeModal("bulk-import-students-modal");
   playFanfareSound();
-  showToast(`🎉 Đã thêm thành công ${parsed.length} học sinh vào ${cls.name}!`, "emerald");
+  showToast(`🎉 Đã thêm ${parsed.length} học sinh & tạo tài khoản (MK mặc định: 123456) vào ${cls.name}!`, "emerald");
 }
 
 // ----------------------------------------------------------------------------
-// 15C. NHẬP CÂU HỎI HÀNG LOẠT & TỰ SINH CARD (PHÔI NGẪU NHIÊN TỪ CARD/)
+// 15C. NHẬP THẺ BÀI HÀNG LOẠT (HỖ TRỢ FILE EXCEL .XLSX, .XLS, .CSV)
 // ----------------------------------------------------------------------------
 let currentBulkCardType = "power";
 
@@ -4079,9 +4712,76 @@ function fillSampleCardsImport() {
   }
 }
 
+function downloadCardExcelTemplate() {
+  const isPower = currentBulkCardType === "power";
+  const rows = isPower
+    ? [
+        ["Tên thẻ", "Nội dung quyền năng / Đặc quyền", "Mã thẻ (Trống = Tự sinh)", "Phôi ảnh (1-24, Trống = Ngẫu nhiên)"],
+        ["Đổi câu hỏi miệng", "Được yêu cầu đổi câu hỏi kiểm tra miệng khác 1 lần duy nhất", "PWR-04", "5"],
+        ["Chọn chỗ ngồi 1 tuần", "Được tự chọn chỗ ngồi yêu thích trong lớp suốt cả tuần học", "PWR-05", "12"],
+        ["Ngôi sao may mắn", "Tự động nhân đôi điểm cộng phát biểu trong tiết học này", "", ""]
+      ]
+    : [
+        ["Tên thẻ", "Nội dung thử thách / Câu hỏi", "Mã thẻ (Trống = Tự sinh)", "Phôi ảnh (1-24, Trống = Ngẫu nhiên)"],
+        ["Thử thách Toán vui", "Giải nhanh 1 câu đố logic toán học trong 1 phút tại bục giảng", "CHL-04", "8"],
+        ["Hát hoặc Đọc thơ", "Hát 1 bài hát hoặc đọc 4 câu thơ tặng cả lớp cuối giờ", "CHL-05", "15"],
+        ["Thuyết trình 1 phút", "Kể lại 1 kiến thức thú vị em vừa học được cho cả lớp nghe", "", ""]
+      ];
+
+  if (typeof XLSX !== "undefined") {
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws["!cols"] = [{ wch: 24 }, { wch: 52 }, { wch: 22 }, { wch: 30 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "DanhSachThe");
+    XLSX.writeFile(wb, isPower ? "Mau_The_PowerCard_ClassJoy.xlsx" : "Mau_The_ChallengeCard_ClassJoy.xlsx");
+    showToast("📥 Đã tải xuống file Excel mẫu danh sách thẻ bài!", "emerald");
+  } else {
+    showToast("⚠️ Thư viện Excel đang tải, vui lòng thử lại sau giây lát!", "amber");
+  }
+}
+
 function handleCardFileUpload(e) {
   const file = e.target.files?.[0];
   if (!file) return;
+  const ext = (file.name.split(".").pop() || "").toLowerCase();
+
+  if ((ext === "xlsx" || ext === "xls") && typeof XLSX !== "undefined") {
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      try {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
+        const lines = [];
+        rows.forEach((row, rIdx) => {
+          if (!Array.isArray(row) || row.length === 0) return;
+          const col0 = String(row[0] ?? "").trim();
+          const col1 = String(row[1] ?? "").trim();
+          if (!col0 && !col1) return;
+          if (rIdx === 0 && /^(tên thẻ|tiêu đề|stt|title|card name)/i.test(col0)) {
+            return;
+          }
+          const col2 = String(row[2] ?? "").trim();
+          const col3 = String(row[3] ?? "").trim();
+          lines.push([col0, col1, col2, col3].filter((x, i) => i <= 1 || x !== "").join(" | "));
+        });
+        const input = document.getElementById("bulk-cards-input");
+        if (input) {
+          input.value = lines.join("\n");
+          previewBulkCards();
+        }
+        showToast(`📊 Đã đọc ${lines.length} thẻ từ file Excel "${file.name}"!`, "emerald");
+      } catch (err) {
+        console.error("Excel card read error:", err);
+        showToast("❌ Không thể đọc file Excel này. Vui lòng kiểm tra định dạng!", "rose");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = "";
+    return;
+  }
+
   const reader = new FileReader();
   reader.onload = function(evt) {
     const text = evt.target.result || "";
@@ -4126,31 +4826,43 @@ function parseCardImportText(text, type) {
 
     let title = "";
     let desc = "";
+    let customCode = "";
+    let customFrameRaw = "";
 
     if (parts.length === 1) {
       desc = parts[0];
       title = desc.length > 25 ? desc.slice(0, 24) + "…" : desc;
     } else {
       title = parts[0];
-      desc = parts.slice(1).join(" - ");
+      desc = parts[1] || parts[0];
+      customCode = (parts[2] || "").toUpperCase();
+      customFrameRaw = (parts[3] || "").trim();
     }
 
-    // Chọn phôi ngẫu nhiên trong toàn bộ 24 phôi thẻ (Card/1.jpg -> Card/24.jpg)
-    const randomFrame = frames[Math.floor(Math.random() * frames.length)];
+    if (!title || /^(tên thẻ|tiêu đề)$/i.test(title)) return;
+
+    let chosenFrame = frames[Math.floor(Math.random() * frames.length)];
+    if (customFrameRaw) {
+      const frameNum = parseInt(customFrameRaw.replace(/[^0-9]/g, ""), 10);
+      if (!isNaN(frameNum) && frameNum >= 1 && frameNum <= 24) {
+        chosenFrame = `${frameNum}.jpg`;
+      }
+    }
+
     const randomIcon = isPower
       ? powerIcons[idx % powerIcons.length]
       : penaltyIcons[idx % penaltyIcons.length];
 
-    const code = isPower
+    const code = customCode || (isPower
       ? `PWR-${String(nextCodeIndex++).padStart(2, "0")}`
-      : `CHL-${String(nextCodeIndex++).padStart(2, "0")}`;
+      : `CHL-${String(nextCodeIndex++).padStart(2, "0")}`);
 
     parsed.push({
       type,
       title,
       description: desc,
       code,
-      cardFrame: randomFrame,
+      cardFrame: chosenFrame,
       icon: randomIcon
     });
   });

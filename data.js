@@ -164,7 +164,9 @@ const DEFAULT_DATA = {
       students: [
         {
           id: "st-1",
-          code: "HS01",
+          code: "10A1-01",
+          username: "10a1-01",
+          password: "123456",
           name: "Nguyễn Hoàng Bách",
           group: "Nhóm 1",
           avatar: "🦖",
@@ -200,7 +202,9 @@ const DEFAULT_DATA = {
         },
         {
           id: "st-2",
-          code: "HS02",
+          code: "10A1-02",
+          username: "10a1-02",
+          password: "123456",
           name: "Trần Lê Bảo Ngọc",
           group: "Nhóm 1",
           avatar: "🦄",
@@ -236,7 +240,9 @@ const DEFAULT_DATA = {
         },
         {
           id: "st-3",
-          code: "HS03",
+          code: "10A1-03",
+          username: "10a1-03",
+          password: "123456",
           name: "Lê Minh Khôi",
           group: "Nhóm 1",
           avatar: "🦊",
@@ -271,7 +277,9 @@ const DEFAULT_DATA = {
         },
         {
           id: "st-4",
-          code: "HS04",
+          code: "10A1-04",
+          username: "10a1-04",
+          password: "123456",
           name: "Phạm Gia Hân",
           group: "Nhóm 2",
           avatar: "🐼",
@@ -297,7 +305,9 @@ const DEFAULT_DATA = {
         },
         {
           id: "st-5",
-          code: "HS05",
+          code: "10A1-05",
+          username: "10a1-05",
+          password: "123456",
           name: "Vũ Đức Duy",
           group: "Nhóm 2",
           avatar: "🦁",
@@ -322,7 +332,9 @@ const DEFAULT_DATA = {
         },
         {
           id: "st-6",
-          code: "HS06",
+          code: "10A1-06",
+          username: "10a1-06",
+          password: "123456",
           name: "Đỗ Phương Linh",
           group: "Nhóm 2",
           avatar: "🐰",
@@ -357,7 +369,9 @@ const DEFAULT_DATA = {
         },
         {
           id: "st-7",
-          code: "HS07",
+          code: "10A1-07",
+          username: "10a1-07",
+          password: "123456",
           name: "Hoàng Tuấn Kiệt",
           group: "Nhóm 3",
           avatar: "🐲",
@@ -372,7 +386,9 @@ const DEFAULT_DATA = {
         },
         {
           id: "st-8",
-          code: "HS08",
+          code: "10A1-08",
+          username: "10a1-08",
+          password: "123456",
           name: "Ngô Khánh Vy",
           group: "Nhóm 3",
           avatar: "🦋",
@@ -398,7 +414,9 @@ const DEFAULT_DATA = {
         },
         {
           id: "st-9",
-          code: "HS09",
+          code: "10A1-09",
+          username: "10a1-09",
+          password: "123456",
           name: "Bùi Quang Minh",
           group: "Nhóm 3",
           avatar: "🐯",
@@ -423,7 +441,9 @@ const DEFAULT_DATA = {
         },
         {
           id: "st-10",
-          code: "HS10",
+          code: "10A1-10",
+          username: "10a1-10",
+          password: "123456",
           name: "Đặng Thảo Tiên",
           group: "Nhóm 4",
           avatar: "🦉",
@@ -448,7 +468,9 @@ const DEFAULT_DATA = {
       students: [
         {
           id: "st-201",
-          code: "11B01",
+          code: "11B2-01",
+          username: "11b2-01",
+          password: "123456",
           name: "Trịnh Nam Phong",
           group: "Nhóm 1",
           avatar: "🦅",
@@ -472,7 +494,9 @@ const DEFAULT_DATA = {
         },
         {
           id: "st-202",
-          code: "11B02",
+          code: "11B2-02",
+          username: "11b2-02",
+          password: "123456",
           name: "Lương Mai Anh",
           group: "Nhóm 2",
           avatar: "🐱",

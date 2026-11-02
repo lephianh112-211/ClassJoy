@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ClassJoy - Lớp Học Vui Nhộn & Thẻ Quyền Lực (Power Cards & Challenge Cards)</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="min-h-screen flex flex-col bg-[#fdfbf7] text-slate-800 antialiased">
@@ -51,10 +52,10 @@
             Tạo lớp học riêng, theo dõi điểm thi đua và trao thẻ đặc quyền <strong>Power Card</strong> & <strong>Challenge Card</strong> trực tiếp trên màn hình trình chiếu.
           </p>
 
-          <!-- NÚT VÀO NHANH TÀI KHOẢN DEMO (KHÔNG CẦN ĐĂNG KÝ) -->
+          <!-- NÚT VÀO NHANH TÀI KHOẢN DEMO -->
           <button type="button" onclick="enterDemoMode()"
             class="w-full py-3.5 px-5 rounded-2xl border-2 border-slate-900 bg-amber-300 hover:bg-amber-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2.5 shadow-[0_4px_0_#1e293b] active:translate-y-1 transition mb-3">
-            <span>⚡ Vào Ngay Bằng Tài Khoản Demo (Có sẵn lớp, học sinh & thẻ mẫu)</span>
+            <span>⚡ Tài khoản demo</span>
           </button>
 
           <!-- 1. ĐĂNG NHẬP NHANH VỚI GOOGLE -->
@@ -116,40 +117,47 @@
         </div>
       </div>
 
-      <!-- Cột phải: Cổng Học sinh nhập Mã Code -->
+      <!-- Cột phải: Cổng Học sinh Đăng nhập Tài khoản riêng -->
       <div class="lg:col-span-5 bg-amber-50/80 rounded-3xl p-7 sm:p-9 border-2 border-amber-300 shadow-[0_8px_0_#f59e0b] flex flex-col justify-between">
         <div>
           <div class="inline-flex items-center gap-2 bg-amber-200 border-2 border-amber-400 text-amber-950 text-xs font-black px-3.5 py-1.5 rounded-full mb-4">
             🎒 DÀNH CHO HỌC SINH
           </div>
-          <h2 class="text-2xl font-black text-slate-900 mb-2">Tra Cứu Điểm & Túi Thẻ</h2>
-          <p class="text-sm font-semibold text-amber-950/80 mb-6 leading-relaxed">
-            Nhập mã học sinh do thầy cô cung cấp để xem tổng điểm tích lũy, các mốc thưởng trên trục <strong>Point Line</strong> và mở túi thẻ cá nhân của em.
+          <h2 class="text-2xl font-black text-slate-900 mb-2">Đăng Nhập Cổng Học Sinh</h2>
+          <p class="text-sm font-semibold text-amber-950/80 mb-5 leading-relaxed">
+            Đăng nhập bằng tài khoản học sinh (quy luật <strong>[MãLớp]-[STT]</strong>, mật khẩu mặc định <strong>123456</strong>) để xem điểm tích lũy, trục <strong>Point Line</strong> và túi thẻ cá nhân.
           </p>
 
-          <form id="landing-student-form" class="space-y-4">
+          <form id="landing-student-form" class="space-y-3.5">
             <div>
-              <label class="block text-xs font-black uppercase tracking-wider text-amber-950 mb-1.5">Mã Học Sinh</label>
+              <label class="block text-xs font-black uppercase tracking-wider text-amber-950 mb-1">Tài khoản / Mã Học Sinh</label>
               <input id="landing-student-code" type="text" required
-                class="w-full px-4 py-3.5 rounded-2xl border-2 border-slate-900 bg-white text-slate-900 font-black text-xl uppercase tracking-wider placeholder:text-slate-400 placeholder:font-normal placeholder:text-sm outline-none focus:ring-4 focus:ring-amber-300 shadow-[0_3px_0_#1e293b]"
-                placeholder="Nhập mã số của em (VD: HS01)..." />
+                class="w-full px-4 py-3 rounded-2xl border-2 border-slate-900 bg-white text-slate-900 font-black text-base tracking-wide placeholder:text-slate-400 placeholder:font-normal placeholder:text-sm outline-none focus:ring-4 focus:ring-amber-300 shadow-[0_3px_0_#1e293b]"
+                placeholder="VD: 10a1-01 hoặc 10A1-01" />
             </div>
+            <div>
+              <label class="block text-xs font-black uppercase tracking-wider text-amber-950 mb-1">Mật khẩu</label>
+              <input id="landing-student-password" type="password" required value="123456"
+                class="w-full px-4 py-3 rounded-2xl border-2 border-slate-900 bg-white text-slate-900 font-black text-base tracking-wide placeholder:text-slate-400 placeholder:font-normal placeholder:text-sm outline-none focus:ring-4 focus:ring-amber-300 shadow-[0_3px_0_#1e293b]"
+                placeholder="Nhập mật khẩu (Mặc định: 123456)..." />
+            </div>
+            <div id="student-login-error" class="hidden text-xs font-black text-rose-700 bg-rose-100 border-2 border-rose-300 px-3.5 py-2 rounded-xl"></div>
             <button type="submit"
-              class="pop-btn pop-btn-blue w-full py-4 px-6 rounded-2xl text-base font-black tracking-wide">
-              <span>🔍 Xem Hồ Sơ Của Em</span>
+              class="pop-btn pop-btn-blue w-full py-3.5 px-6 rounded-2xl text-sm sm:text-base font-black tracking-wide">
+              <span>🔑 Đăng Nhập Xem Hồ Sơ</span>
             </button>
           </form>
         </div>
 
-        <div class="mt-6 pt-4 border-t-2 border-amber-200/60 flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-amber-900/80">
+        <div class="mt-5 pt-4 border-t-2 border-amber-200/60 flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-amber-900/80">
           <div class="flex items-center gap-1.5">
             <span class="text-base">💡</span>
-            <span>Mã HS demo để test thử:</span>
+            <span>TK Học sinh demo:</span>
           </div>
           <div class="flex gap-1.5">
-            <button type="button" onclick="quickStudentLookup('HS01')" class="px-2.5 py-1 rounded-lg bg-white border border-slate-900 text-slate-900 font-black text-xs hover:bg-amber-100 shadow-[0_1px_0_#1e293b]">HS01</button>
-            <button type="button" onclick="quickStudentLookup('HS02')" class="px-2.5 py-1 rounded-lg bg-white border border-slate-900 text-slate-900 font-black text-xs hover:bg-amber-100 shadow-[0_1px_0_#1e293b]">HS02</button>
-            <button type="button" onclick="quickStudentLookup('HS03')" class="px-2.5 py-1 rounded-lg bg-white border border-slate-900 text-slate-900 font-black text-xs hover:bg-amber-100 shadow-[0_1px_0_#1e293b]">HS03</button>
+            <button type="button" onclick="fillAndLoginDemoStudent('10a1-01')" class="px-2.5 py-1 rounded-lg bg-white border border-slate-900 text-slate-900 font-black text-xs hover:bg-amber-100 shadow-[0_1px_0_#1e293b]">10a1-01</button>
+            <button type="button" onclick="fillAndLoginDemoStudent('10a1-02')" class="px-2.5 py-1 rounded-lg bg-white border border-slate-900 text-slate-900 font-black text-xs hover:bg-amber-100 shadow-[0_1px_0_#1e293b]">10a1-02</button>
+            <button type="button" onclick="fillAndLoginDemoStudent('10a1-03')" class="px-2.5 py-1 rounded-lg bg-white border border-slate-900 text-slate-900 font-black text-xs hover:bg-amber-100 shadow-[0_1px_0_#1e293b]">10a1-03</button>
           </div>
         </div>
       </div>
@@ -675,33 +683,42 @@
          ====================================================================== -->
     <section id="tab-student-portal" class="hidden flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
       
-      <!-- Khung nhập mã Code Học sinh -->
-      <div class="bg-white rounded-3xl p-6 sm:p-8 border-2 border-slate-900 shadow-[0_8px_0_#1e293b]">
-        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+      <!-- Khung Đăng nhập Tài khoản Học sinh -->
+      <div id="student-portal-login-card" class="bg-white rounded-3xl p-6 sm:p-8 border-2 border-slate-900 shadow-[0_8px_0_#1e293b]">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-5">
           <div>
             <span class="text-xs font-black uppercase tracking-wider text-amber-950 bg-amber-300 border border-slate-900 px-3.5 py-1 rounded-full shadow-[0_2px_0_#1e293b]">
-              🎒 CỔNG TRA CỨU HỌC SINH
+              🎒 TÀI KHOẢN HỌC SINH (CHẾ ĐỘ XEM THÔNG TIN)
             </span>
-            <h2 class="text-2xl font-black text-slate-900 mt-2">Tra Cứu Điểm, Tiến Trình & Túi Thẻ</h2>
+            <h2 class="text-2xl font-black text-slate-900 mt-2">Đăng Nhập Xem Điểm, Tiến Trình & Túi Thẻ</h2>
             <p class="text-sm font-bold text-slate-500">
-              Nhập mã cá nhân của em (VD: <strong>HS01, HS02, HS03...</strong>) để xem em <strong>đã đạt đến mốc điểm nào</strong> trên Point Line, cần bao nhiêu điểm nữa để nhận <strong>Power Card</strong>, và xem các <strong>Challenge Card</strong> của em.
+              Nhập tài khoản học sinh (quy luật <strong>[MãLớp]-[STT]</strong>, VD: <strong>10a1-01</strong>) và mật khẩu (mặc định <strong>123456</strong>) để xem tiến trình Point Line và túi thẻ cá nhân.
             </p>
           </div>
         </div>
 
-        <form onsubmit="handleStudentPortalSearch(event)" class="flex flex-col sm:flex-row gap-3">
-          <input id="portal-code-input" type="text" required
-            placeholder="Nhập mã Code học sinh (VD: HS01)..."
-            class="flex-1 px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-slate-900 font-black text-lg uppercase tracking-wider text-slate-900 outline-none focus:bg-white shadow-[0_3px_0_#1e293b]" />
-          <button type="submit"
-            class="pop-btn pop-btn-blue px-8 py-3.5 rounded-2xl text-sm font-black">
-            🔍 Xem Tiến Trình Của Em
-          </button>
+        <form onsubmit="handleStudentPortalSearch(event)" class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+          <div class="sm:col-span-5">
+            <input id="portal-code-input" type="text" required
+              placeholder="Tài khoản / Mã HS (VD: 10a1-01)..."
+              class="w-full px-4 py-3.5 rounded-2xl bg-slate-50 border-2 border-slate-900 font-black text-base tracking-wide text-slate-900 outline-none focus:bg-white shadow-[0_3px_0_#1e293b]" />
+          </div>
+          <div class="sm:col-span-4">
+            <input id="portal-password-input" type="password" required value="123456"
+              placeholder="Mật khẩu (Mặc định: 123456)..."
+              class="w-full px-4 py-3.5 rounded-2xl bg-slate-50 border-2 border-slate-900 font-black text-base tracking-wide text-slate-900 outline-none focus:bg-white shadow-[0_3px_0_#1e293b]" />
+          </div>
+          <div class="sm:col-span-3">
+            <button type="submit"
+              class="pop-btn pop-btn-blue w-full h-full py-3.5 px-5 rounded-2xl text-sm font-black">
+              🔑 Đăng Nhập
+            </button>
+          </div>
         </form>
 
-        <!-- Chọn nhanh mã HS (chỉ hiện khi giáo viên có HS trong lớp) -->
+        <!-- Chọn nhanh mã HS (chỉ hiện khi giáo viên đang đăng nhập để kiểm tra nhanh) -->
         <div id="portal-quick-codes-wrapper" class="mt-4 pt-4 border-t-2 border-slate-100 flex flex-wrap items-center gap-2 hidden">
-          <span class="text-xs font-black text-slate-400 mr-1">Chọn nhanh HS trong lớp:</span>
+          <span class="text-xs font-black text-slate-400 mr-1">👩‍🏫 Giáo viên xem nhanh HS trong lớp:</span>
           <div id="portal-quick-codes" class="flex flex-wrap gap-1.5"></div>
         </div>
       </div>
@@ -1164,10 +1181,21 @@
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-black text-slate-700 mb-1">Mã Code tra cứu *</label>
-            <input id="new-student-code" type="text" required placeholder="VD: HS11"
+            <label class="block text-xs font-black text-slate-700 mb-1">Mã HS & Tài khoản ([Lớp]-[STT]) *</label>
+            <input id="new-student-code" type="text" required placeholder="VD: 10A1-11"
+              oninput="updateNewStudentAccountPreview()"
               class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 text-sm font-black uppercase outline-none focus:border-slate-900" />
           </div>
+          <div>
+            <label class="block text-xs font-black text-slate-700 mb-1">Mật khẩu mặc định *</label>
+            <input id="new-student-password" type="text" required value="123456"
+              class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 text-sm font-black outline-none focus:border-slate-900 bg-amber-50/50" />
+          </div>
+        </div>
+        <div class="px-3 py-2 rounded-xl bg-indigo-50 border border-indigo-200 text-[11px] font-bold text-indigo-900 flex items-center justify-between">
+          <span>👤 Tài khoản tự tạo cho con: <strong id="new-student-username-preview" class="font-black text-indigo-700">10a1-11</strong></span>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-black text-slate-700 mb-1">Nhóm / Tổ</label>
             <select id="new-student-group"
@@ -1178,24 +1206,24 @@
               <option value="Nhóm 4">Nhóm 4</option>
             </select>
           </div>
-        </div>
-        <div>
-          <label class="block text-xs font-black text-slate-700 mb-1">Chọn Avatar nhân vật</label>
-          <select id="new-student-avatar"
-            class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 text-base font-bold outline-none">
-            <option value="🦖">🦖 Khủng long xanh</option>
-            <option value="🦄">🦄 Kỳ lân phép thuật</option>
-            <option value="🦊">🦊 Cáo thông thái</option>
-            <option value="🐼">🐼 Gấu trúc vui vẻ</option>
-            <option value="🦁">🦁 Sư tử dũng cảm</option>
-            <option value="🐰">🐰 Thỏ năng động</option>
-            <option value="🦉">🦉 Cú mèo bác học</option>
-            <option value="🐯">🐯 Hổ tia chớp</option>
-          </select>
+          <div>
+            <label class="block text-xs font-black text-slate-700 mb-1">Chọn Avatar nhân vật</label>
+            <select id="new-student-avatar"
+              class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 text-sm font-bold outline-none">
+              <option value="🦖">🦖 Khủng long</option>
+              <option value="🦄">🦄 Kỳ lân</option>
+              <option value="🦊">🦊 Cáo</option>
+              <option value="🐼">🐼 Gấu trúc</option>
+              <option value="🦁">🦁 Sư tử</option>
+              <option value="🐰">🐰 Thỏ</option>
+              <option value="🦉">🦉 Cú mèo</option>
+              <option value="🐯">🐯 Hổ</option>
+            </select>
+          </div>
         </div>
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="closeModal('add-student-modal')" class="pop-btn pop-btn-white px-4 py-2 rounded-xl text-xs font-black">Hủy</button>
-          <button type="submit" class="pop-btn pop-btn-green px-5 py-2 rounded-xl text-xs font-black">Thêm vào lớp</button>
+          <button type="submit" class="pop-btn pop-btn-green px-5 py-2 rounded-xl text-xs font-black">+ Tạo HS & Tài Khoản</button>
         </div>
       </form>
     </div>
@@ -1243,25 +1271,29 @@
       </div>
 
       <div class="p-3.5 rounded-2xl bg-amber-50 border-2 border-amber-300 text-xs font-bold text-amber-950 mb-4 space-y-1">
-        <div class="font-black text-sm">💡 Cú pháp hỗ trợ (mỗi học sinh 1 dòng):</div>
-        <div><code class="bg-white px-2 py-0.5 rounded font-black border border-amber-300">Họ và tên | Mã HS | Nhóm | Điểm ban đầu</code></div>
+        <div class="font-black text-sm">💡 Hỗ trợ tải trực tiếp file Excel (.xlsx, .xls, .csv) hoặc dán danh sách:</div>
+        <div><code class="bg-white px-2 py-0.5 rounded font-black border border-amber-300">Họ và tên | Mã HS (Trống = [Lớp]-[STT]) | Nhóm | Điểm ban đầu | Mật khẩu (Mặc định 123456)</code></div>
         <div class="text-[11px] text-slate-600 mt-1">
-          • Hỗ trợ phân tách bằng dấu gạch đứng <code class="font-black">|</code>, dấu phẩy <code class="font-black">,</code> hoặc phím Tab khi copy từ Excel/Sheets.<br/>
-          • Nếu chỉ nhập <strong>Họ và tên</strong>, hệ thống sẽ tự động cấp Mã (HSxx), chia đều vào các Nhóm và gán Avatar con vật ngẫu nhiên!
+          • Khi nhập học sinh, hệ thống <strong>tự động tạo tài khoản riêng</strong> theo quy luật <code class="font-black">[mã-lớp]-[stt]</code> (VD: <code class="font-black">10a1-01</code>) với mật khẩu mặc định <code class="font-black">123456</code>.<br/>
+          • Nếu chỉ có cột <strong>Họ và tên</strong> trong file Excel, hệ thống sẽ tự sinh mã, chia đều vào các nhóm và cấp tài khoản tự động!
         </div>
       </div>
 
       <div class="space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-2">
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <label class="pop-btn pop-btn-green px-3.5 py-1.5 rounded-xl text-xs font-black cursor-pointer inline-flex items-center gap-1.5">
+              📊 Tải lên file Excel (.xlsx, .xls, .csv)
+              <input type="file" accept=".xlsx,.xls,.csv,.txt" onchange="handleStudentFileUpload(event)" class="hidden" />
+            </label>
+            <button type="button" onclick="downloadStudentExcelTemplate()"
+              class="pop-btn pop-btn-yellow px-3 py-1.5 rounded-xl text-xs font-black">
+              📥 Tải file Excel mẫu
+            </button>
             <button type="button" onclick="fillSampleStudentsImport()"
               class="pop-btn pop-btn-white px-3 py-1.5 rounded-xl text-xs font-black">
               📋 Dán mẫu thử
             </button>
-            <label class="pop-btn pop-btn-white px-3 py-1.5 rounded-xl text-xs font-black cursor-pointer inline-flex items-center gap-1.5">
-              📁 Tải file .txt / .csv
-              <input type="file" accept=".txt,.csv" onchange="handleStudentFileUpload(event)" class="hidden" />
-            </label>
           </div>
           <button type="button" onclick="clearBulkStudentInput()" class="text-xs font-bold text-slate-400 hover:text-rose-600">
             Xóa nội dung
@@ -1329,25 +1361,29 @@
       </div>
 
       <div class="p-3.5 rounded-2xl bg-indigo-50 border-2 border-indigo-200 text-xs font-bold text-indigo-950 mb-4 space-y-1">
-        <div class="font-black text-sm">💡 Cú pháp hỗ trợ (mỗi thẻ 1 dòng):</div>
-        <div><code class="bg-white px-2 py-0.5 rounded font-black border border-indigo-200">Tên thẻ | Nội dung thẻ / thử thách</code></div>
+        <div class="font-black text-sm">💡 Hỗ trợ tải trực tiếp file Excel (.xlsx, .xls, .csv) hoặc dán danh sách:</div>
+        <div><code class="bg-white px-2 py-0.5 rounded font-black border border-indigo-200">Tên thẻ | Nội dung thẻ / thử thách | Mã thẻ (Tùy chọn) | Số phôi ảnh (1-24)</code></div>
         <div class="text-[11px] text-slate-600 mt-1">
           • Ví dụ: <code class="font-black">Hoãn kiểm tra | Được hoãn kiểm tra miệng 1 lần sang tiết sau</code><br/>
-          • Hoặc chỉ cần gõ nội dung thẻ, hệ thống sẽ tự sinh tên thẻ, mã code và <strong>tự động chọn phôi ảnh ngẫu nhiên</strong> từ 24 phôi ảnh (1.jpg - 24.jpg) trong folder Card/!
+          • Nếu để trống cột Mã thẻ hoặc Phôi ảnh trong Excel, hệ thống sẽ tự sinh mã và <strong>chọn phôi ảnh ngẫu nhiên</strong> từ 24 phôi (1.jpg - 24.jpg)!
         </div>
       </div>
 
       <div class="space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-2">
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <label class="pop-btn pop-btn-green px-3.5 py-1.5 rounded-xl text-xs font-black cursor-pointer inline-flex items-center gap-1.5">
+              📊 Tải lên file Excel (.xlsx, .xls, .csv)
+              <input type="file" accept=".xlsx,.xls,.csv,.txt" onchange="handleCardFileUpload(event)" class="hidden" />
+            </label>
+            <button type="button" onclick="downloadCardExcelTemplate()"
+              class="pop-btn pop-btn-yellow px-3 py-1.5 rounded-xl text-xs font-black">
+              📥 Tải file Excel mẫu
+            </button>
             <button type="button" onclick="fillSampleCardsImport()"
               class="pop-btn pop-btn-white px-3 py-1.5 rounded-xl text-xs font-black">
               📋 Dán mẫu thẻ
             </button>
-            <label class="pop-btn pop-btn-white px-3 py-1.5 rounded-xl text-xs font-black cursor-pointer inline-flex items-center gap-1.5">
-              📁 Tải file .txt / .csv
-              <input type="file" accept=".txt,.csv" onchange="handleCardFileUpload(event)" class="hidden" />
-            </label>
           </div>
           <button type="button" onclick="clearBulkCardInput()" class="text-xs font-bold text-slate-400 hover:text-rose-600">
             Xóa nội dung
@@ -1384,6 +1420,46 @@
           </button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 10: HỌC SINH TỰ ĐỔI MẬT KHẨU CÁ NHÂN
+       ======================================================================== -->
+  <div id="student-change-password-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 border-2 border-slate-900 shadow-[0_12px_0_#1e293b] animate-pop">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <span class="text-[11px] font-black uppercase tracking-wider bg-amber-300 text-slate-900 border border-slate-900 px-2.5 py-0.5 rounded-full">
+            🔐 Bảo Mật Tài Khoản
+          </span>
+          <h3 class="text-xl font-black text-slate-900 mt-1">Đổi Mật Khẩu Của Em</h3>
+        </div>
+        <button onclick="closeModal('student-change-password-modal')" class="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-100 text-slate-900 font-black">✕</button>
+      </div>
+      <form onsubmit="handleStudentChangePassword(event)" class="space-y-3.5">
+        <input type="hidden" id="change-pw-student-id" value="" />
+        <div>
+          <label class="block text-xs font-black text-slate-700 mb-1">Mật khẩu hiện tại *</label>
+          <input id="student-old-password" type="password" required placeholder="Nhập mật khẩu hiện tại (Mặc định: 123456)..."
+            class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 text-sm font-black outline-none focus:border-slate-900" />
+        </div>
+        <div>
+          <label class="block text-xs font-black text-slate-700 mb-1">Mật khẩu mới *</label>
+          <input id="student-new-password" type="password" required minlength="4" placeholder="Nhập mật khẩu mới (tối thiểu 4 ký tự)..."
+            class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 text-sm font-black outline-none focus:border-slate-900" />
+        </div>
+        <div>
+          <label class="block text-xs font-black text-slate-700 mb-1">Xác nhận mật khẩu mới *</label>
+          <input id="student-confirm-password" type="password" required minlength="4" placeholder="Nhập lại mật khẩu mới..."
+            class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 text-sm font-black outline-none focus:border-slate-900" />
+        </div>
+        <div id="change-pw-error" class="hidden text-xs font-black text-rose-700 bg-rose-100 border-2 border-rose-300 px-3 py-2 rounded-xl"></div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeModal('student-change-password-modal')" class="pop-btn pop-btn-white px-4 py-2 rounded-xl text-xs font-black">Hủy</button>
+          <button type="submit" class="pop-btn pop-btn-green px-5 py-2 rounded-xl text-xs font-black">💾 Lưu Mật Khẩu Mới</button>
+        </div>
+      </form>
     </div>
   </div>
 
