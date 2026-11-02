@@ -247,8 +247,14 @@
             class="px-4 py-2.5 rounded-2xl bg-amber-50 hover:bg-amber-100 font-black text-slate-900 text-sm outline-none cursor-pointer border-2 border-slate-900 shadow-[0_2px_0_#1e293b]">
           </select>
           <button onclick="openAddClassModal()"
-            class="pop-btn pop-btn-white px-3 py-2 rounded-xl text-xs font-black">
+            class="pop-btn pop-btn-white px-3 py-2 rounded-xl text-xs font-black"
+            title="Tạo thêm lớp học mới">
             + Lớp
+          </button>
+          <button onclick="deleteCurrentClass()"
+            class="pop-btn pop-btn-white px-3 py-2 rounded-xl text-xs font-black text-rose-600 hover:bg-rose-50"
+            title="Xóa lớp học đang chọn cùng học sinh trong lớp">
+            🗑️ Xóa lớp
           </button>
           <button onclick="openAddStudentModal()"
             class="pop-btn pop-btn-green px-3 py-2 rounded-xl text-xs font-black">
@@ -261,8 +267,8 @@
           </button>
           <button onclick="clearClassStudents()"
             class="pop-btn pop-btn-white px-3 py-2 rounded-xl text-xs font-black text-rose-600 hover:bg-rose-50"
-            title="Xóa toàn bộ học sinh mẫu trong lớp hiện tại để tạo danh sách học sinh thật">
-            🧹 Xóa HS mẫu
+            title="Xóa toàn bộ học sinh trong lớp hiện tại để tạo danh sách học sinh thật">
+            🧹 Xóa hết HS
           </button>
         </div>
 

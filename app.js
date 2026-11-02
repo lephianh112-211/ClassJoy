@@ -34,7 +34,12 @@ try {
   console.warn("Firebase Init:", e);
 }
 
-const STORAGE_KEY = "CLASSJOY_APP_STATE_V2";
+function getStorageKey(user = currentFirebaseUser) {
+  if (user && user.uid) {
+    return `CLASSJOY_TEACHER_${user.uid}`;
+  }
+  return "CLASSJOY_DEMO_STATE";
+}
 
 let appState = loadState();
 if (typeof appState.isPointsHidden === "undefined") {
@@ -102,9 +107,22 @@ function sanitizeCardFrames(state) {
   }
 }
 
-function loadState() {
+function ensureUniqueClassIds(state, user) {
+  if (!state || !user || !user.uid) return;
+  const prefix = `cls_${user.uid.slice(0, 6)}_`;
+  if (Array.isArray(state.classes)) {
+    state.classes.forEach((cls, idx) => {
+      if (!cls.id || cls.id === "class-10a1" || cls.id === "class-11b2" || cls.id === "class-my-1" || !cls.id.startsWith("cls_")) {
+        cls.id = `${prefix}${idx + 1}_${Date.now()}`;
+      }
+    });
+  }
+}
+
+function loadState(user = currentFirebaseUser) {
+  const key = getStorageKey(user);
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (!parsed.pointLineMilestones) {
@@ -122,8 +140,10 @@ function loadState() {
 }
 
 function saveState() {
+  if (!appState) return;
+  const key = getStorageKey(currentFirebaseUser);
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+    localStorage.setItem(key, JSON.stringify(appState));
   } catch (err) {
     console.warn("Không thể lưu vào LocalStorage:", err);
   }
@@ -140,12 +160,13 @@ function saveState() {
     if (currentClass) {
       firestoreDb.collection("shared_classes").doc(currentClass.id).set({
         classId: currentClass.id,
+        teacherUid: currentFirebaseUser.uid,
         className: currentClass.name,
-        students: currentClass.students,
-        powerCards: appState.powerCards,
-        penaltyCards: appState.penaltyCards,
-        pointLineMilestones: appState.pointLineMilestones,
-        isPointsHidden: appState.isPointsHidden,
+        students: currentClass.students || [],
+        powerCards: appState.powerCards || [],
+        penaltyCards: appState.penaltyCards || [],
+        pointLineMilestones: appState.pointLineMilestones || [],
+        isPointsHidden: Boolean(appState.isPointsHidden),
         teacherName: currentFirebaseUser.displayName || currentFirebaseUser.email || "Giáo viên",
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true }).catch((err) => console.warn("Lỗi đồng bộ shared_classes:", err));
@@ -704,6 +725,7 @@ async function logoutTeacher() {
   if (studentPortalLiveUnsub) {
     studentPortalLiveUnsub();
     studentPortalLiveUnsub = null;
+    studentPortalLiveClassId = null;
   }
   if (firebaseAuth && firebaseAuth.currentUser) {
     try {
@@ -714,14 +736,24 @@ async function logoutTeacher() {
   }
   currentFirebaseUser = null;
   isDemoMode = false;
+
+  // Xóa sạch trạng thái trong RAM để tài khoản sau không bị dính dữ liệu của tài khoản trước!
+  appState = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  sanitizeCardFrames(appState);
+  currentClassId = appState.classes[0]?.id || "class-10a1";
+  activeStudentModalId = null;
+  revealedStudentIds.clear();
+
   document.getElementById("main-app").classList.add("hidden");
   document.getElementById("landing-screen").classList.remove("hidden");
-  showToast("🚪 Đã đăng xuất.", "slate");
+  showToast("🚪 Đã đăng xuất an toàn.", "slate");
 }
 
 function enterDemoMode() {
   isDemoMode = true;
   currentFirebaseUser = null;
+  appState = loadState(null);
+  currentClassId = appState.classes[0]?.id || "class-10a1";
   updateTeacherInfoUI("Cô Nguyễn Minh Anh (Demo)", "giaovien@demo.local", null);
   enterMainApp("teacher");
   showToast("⚡ Đang dùng thử dữ liệu mẫu Offline (Demo)", "indigo");
@@ -751,13 +783,15 @@ async function loadTeacherDataFromFirestore(user) {
     const snap = await docRef.get();
     if (snap.exists && snap.data()?.appState) {
       appState = snap.data().appState;
+      ensureUniqueClassIds(appState, user);
       sanitizeCardFrames(appState);
     } else {
       // Khởi tạo lớp học mới tinh (trống học sinh) cho tài khoản giáo viên mới
+      const uniqueClassId = `cls_${user.uid.slice(0, 6)}_1_${Date.now()}`;
       const newInitialState = JSON.parse(JSON.stringify(DEFAULT_DATA));
       newInitialState.classes = [
         {
-          id: "class-my-1",
+          id: uniqueClassId,
           name: "Lớp học của tôi",
           grade: "Khối 10",
           room: "Phòng học",
@@ -766,7 +800,9 @@ async function loadTeacherDataFromFirestore(user) {
         }
       ];
       newInitialState.speechQueue = [];
-      newInitialState.teacherAccount.name = user.displayName || "Giáo viên";
+      newInitialState.teacherAccount.name = user.displayName || user.email?.split("@")[0] || "Giáo viên";
+      newInitialState.teacherAccount.school = "Lớp học ClassJoy";
+      ensureUniqueClassIds(newInitialState, user);
       sanitizeCardFrames(newInitialState);
       appState = newInitialState;
       await docRef.set({
@@ -776,13 +812,68 @@ async function loadTeacherDataFromFirestore(user) {
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
     }
-    currentClassId = appState.classes[0]?.id || "class-my-1";
+    currentClassId = appState.classes[0]?.id;
     saveState();
     renderAll();
   } catch (err) {
     console.error("Lỗi tải Firestore:", err);
-    showToast("⚠️ Không thể tải dữ liệu đám mây, dùng dữ liệu lưu cục bộ.", "amber");
+    // Nếu lỗi mạng, thử đọc cache riêng của giáo viên này từ localStorage
+    appState = loadState(user);
+    currentClassId = appState.classes[0]?.id;
+    renderAll();
+    showToast("⚠️ Đang dùng dữ liệu lưu tạm trên thiết bị.", "amber");
   }
+}
+
+function deleteCurrentClass() {
+  const cls = getCurrentClass();
+  if (!cls) return;
+  if (appState.classes.length <= 1) {
+    showToast("⚠️ Bạn phải giữ lại ít nhất 1 lớp học!", "rose");
+    return;
+  }
+  if (!confirm(`Bạn có chắc chắn muốn xóa lớp "${cls.name}" cùng toàn bộ dữ liệu học sinh trong lớp này không? Thao tác này không thể hoàn tác!`)) {
+    return;
+  }
+
+  const deletedId = cls.id;
+  appState.classes = appState.classes.filter((c) => c.id !== deletedId);
+  currentClassId = appState.classes[0].id;
+  currentGroupFilter = "ALL";
+  revealedStudentIds.clear();
+
+  // Xóa khỏi shared_classes trên Firestore nếu có
+  if (firestoreDb && currentFirebaseUser && !isDemoMode) {
+    firestoreDb.collection("shared_classes").doc(deletedId).delete().catch((e) => console.warn("Lỗi xóa shared_class:", e));
+  }
+
+  saveState();
+  renderAll();
+  showToast(`🗑️ Đã xóa lớp "${cls.name}" thành công!`, "slate");
+}
+
+function deleteStudent(studentId, event) {
+  if (event) event.stopPropagation();
+  const found = findStudentById(studentId);
+  if (!found) return;
+  const { student, classObj } = found;
+
+  if (!confirm(`Bạn có chắc muốn xóa học sinh "${student.name}" (Mã: ${student.code}) khỏi ${classObj.name} không?`)) {
+    return;
+  }
+
+  classObj.students = classObj.students.filter((s) => s.id !== studentId);
+  if (appState.speechQueue) {
+    appState.speechQueue = appState.speechQueue.filter((q) => q.studentId !== studentId);
+  }
+  revealedStudentIds.delete(studentId);
+
+  saveState();
+  if (activeStudentModalId === studentId) {
+    closeModal("student-detail-modal");
+  }
+  renderAll();
+  showToast(`🗑️ Đã xóa học sinh "${student.name}"!`, "slate");
 }
 
 function clearClassStudents() {
@@ -1177,7 +1268,13 @@ function renderClassroom() {
                 <span class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-300">
                   ${st.code}
                 </span>
-                ${pointBadgeHtml}
+                <div class="flex items-center gap-1.5">
+                  ${pointBadgeHtml}
+                  <button onclick="deleteStudent('${st.id}', event)" title="Xóa học sinh này khỏi lớp"
+                    class="w-6 h-6 rounded-lg bg-slate-100 hover:bg-rose-100 border border-slate-300 hover:border-rose-400 text-slate-400 hover:text-rose-600 font-black text-xs flex items-center justify-center transition">
+                    ✕
+                  </button>
+                </div>
               </div>
 
               <div class="avatar-sticker w-16 h-16 sm:w-18 sm:h-18 rounded-2xl ${st.avatarBg} border-2 border-slate-900 flex items-center justify-center text-4xl shadow-sm my-1">
@@ -1323,7 +1420,7 @@ function renderGroupsTab() {
                     </div>
                   </div>
 
-                  <!-- Dropdown chuyển nhóm tùy ý cho giáo viên -->
+                  <!-- Dropdown chuyển nhóm & nút xóa cho giáo viên -->
                   <div class="flex items-center gap-1.5 shrink-0">
                     <select onchange="moveStudentToGroup('${st.id}', this.value)"
                       title="Đổi nhóm cho học sinh này"
@@ -1335,6 +1432,10 @@ function renderGroupsTab() {
                         )
                         .join("")}
                     </select>
+                    <button onclick="deleteStudent('${st.id}')" title="Xóa học sinh này khỏi lớp"
+                      class="w-7 h-7 rounded-xl bg-rose-50 hover:bg-rose-100 border-2 border-rose-300 text-rose-700 font-black text-xs flex items-center justify-center transition">
+                      🗑️
+                    </button>
                   </div>
                 </div>
               `
@@ -1985,6 +2086,11 @@ function renderStudentDetailModalContent(studentId) {
               : ""
           }
         </div>
+        <button onclick="deleteStudent('${student.id}')"
+          class="pop-btn pop-btn-coral px-3 py-2 rounded-2xl text-xs font-black flex items-center gap-1.5"
+          title="Xóa học sinh này khỏi lớp">
+          <span>🗑️ Xóa HS</span>
+        </button>
         <button onclick="closeModal('student-detail-modal')"
           class="w-10 h-10 rounded-2xl border-2 border-slate-900 bg-slate-100 hover:bg-slate-200 text-slate-900 font-black text-lg">✕</button>
       </div>
@@ -3601,9 +3707,10 @@ function handleCreateClass(e) {
   e.preventDefault();
   const name = document.getElementById("new-class-name").value.trim();
   const room = document.getElementById("new-class-room").value.trim() || "Phòng học chính";
+  const userPrefix = currentFirebaseUser ? `cls_${currentFirebaseUser.uid.slice(0, 6)}_` : "cls_demo_";
 
   const newCls = {
-    id: "class-" + Date.now(),
+    id: `${userPrefix}${Date.now()}`,
     name,
     grade: "Khối Mới",
     room,
