@@ -25,6 +25,19 @@ const AVAILABLE_CARD_FRAMES = [
   "24.jpg"
 ];
 
+const CARD_CATEGORIES = {
+  power: [
+    "Nhóm Trợ giúp học tập",
+    "Nhóm Chiến lược",
+    "Nhóm Tương tác"
+  ],
+  penalty: [
+    "Nhóm Hỗ trợ giáo viên",
+    "Nhóm Phát triển Bản thân",
+    "Nhóm Kỹ năng"
+  ]
+};
+
 // ============================================================================
 // DỮ LIỆU MẶC ĐỊNH & KHUNG CẤU TRÚC THẺ (POWER CARD, CHALLENGE CARD, GROUPS & RANKING)
 // ============================================================================
@@ -70,18 +83,19 @@ const DEFAULT_DATA = {
     ]
   },
 
-  // Bộ 3 thẻ Power Card mẫu (Nhận khi đạt mốc trên trục Point Line)
+  // Bộ 12 thẻ Power Card mẫu từ Mau_The_PowerCard_ClassJoy-2.xlsx
   powerCards: [
     {
       id: "pc-1",
       cardFrame: "1.jpg",
       code: "PWR-01",
-      title: "Hoãn kiểm tra miệng",
-      rarity: "SSR",
-      icon: "🛡️",
+      title: "Priority Speaking Card",
+      category: "Nhóm Trợ giúp học tập",
+      rarity: "SR",
+      icon: "🙋",
       gradient: "from-amber-400 via-orange-500 to-red-500",
-      description: "Được phép hoãn kiểm tra miệng 1 lần sang tiết học kế tiếp mà không bị trừ điểm.",
-      usageRule: "Chỉ dùng 1 lần duy nhất trước khi giáo viên đọc câu hỏi.",
+      description: "Ưu tiên trả lời câu hỏi khi có nhiều bạn cùng tranh suất.",
+      usageRule: "Sử dụng trước khi giáo viên chọn người trả lời câu hỏi.",
       pdfUrl: "",
       pdfPage: 1
     },
@@ -89,12 +103,13 @@ const DEFAULT_DATA = {
       id: "pc-2",
       cardFrame: "2.jpg",
       code: "PWR-02",
-      title: "Hoãn bài tập về nhà hôm nay",
-      rarity: "SR",
-      icon: "🏖️",
+      title: "Teamwork Booster",
+      category: "Nhóm Trợ giúp học tập",
+      rarity: "SSR",
+      icon: "🤝",
       gradient: "from-cyan-400 via-blue-500 to-indigo-600",
-      description: "Miễn hoặc lùi hạn nộp 1 bài tập về nhà trong ngày hôm nay.",
-      usageRule: "Báo với giáo viên đầu giờ khi kiểm tra bài tập.",
+      description: "Gọi 1 bạn xung phong trợ giúp câu hỏi cá nhân, đúng thì cả hai cùng cộng điểm.",
+      usageRule: "Gọi trợ giúp khi gặp câu hỏi khó, nộp thẻ sau khi dùng.",
       pdfUrl: "",
       pdfPage: 2
     },
@@ -102,54 +117,249 @@ const DEFAULT_DATA = {
       id: "pc-3",
       cardFrame: "3.jpg",
       code: "PWR-03",
-      title: "Triệu hồi đồng đội & Quà KitKat",
-      rarity: "UR",
-      icon: "🍫",
-      gradient: "from-fuchsia-500 via-purple-600 to-pink-600",
-      description: "Được gọi 1 bạn bất kỳ lên trả lời bài cũ thay mình HOẶC đổi ngay 1 thanh KitKat / Móc khóa từ giáo viên.",
-      usageRule: "Nộp lại thẻ cho giáo viên sau khi kích hoạt.",
+      title: "Drop 1",
+      category: "Nhóm Trợ giúp học tập",
+      rarity: "SR",
+      icon: "🎯",
+      gradient: "from-emerald-400 via-teal-500 to-cyan-600",
+      description: "Được loại bỏ 1 đáp án sai trong câu hỏi trắc nghiệm/câu hỏi ngắn khó.",
+      usageRule: "Dùng khi làm bài tập hoặc kiểm tra trắc nghiệm trên lớp.",
       pdfUrl: "",
       pdfPage: 3
+    },
+    {
+      id: "pc-4",
+      cardFrame: "4.jpg",
+      code: "PWR-04",
+      title: "The Hope Star",
+      category: "Nhóm Chiến lược",
+      rarity: "UR",
+      icon: "⭐",
+      gradient: "from-yellow-400 via-amber-500 to-orange-600",
+      description: "Nhân đôi điểm nếu trả lời đúng, nhưng bị trừ đúng số điểm đó nếu sai.",
+      usageRule: "Kích hoạt Ngôi Sao Hy Vọng trước khi trả lời câu hỏi.",
+      pdfUrl: "",
+      pdfPage: 4
+    },
+    {
+      id: "pc-5",
+      cardFrame: "5.jpg",
+      code: "PWR-05",
+      title: "Long-term Investment",
+      category: "Nhóm Chiến lược",
+      rarity: "SSR",
+      icon: "📈",
+      gradient: "from-blue-500 via-indigo-600 to-purple-700",
+      description: "Dự đoán sự tiến bộ của một bạn khác tuần tới để kiếm điểm thưởng bí mật.",
+      usageRule: "Ghi tên bạn dự đoán gửi giáo viên đầu tuần.",
+      pdfUrl: "",
+      pdfPage: 5
+    },
+    {
+      id: "pc-6",
+      cardFrame: "6.jpg",
+      code: "PWR-06",
+      title: "Point Divided",
+      category: "Nhóm Chiến lược",
+      rarity: "SR",
+      icon: "🎁",
+      gradient: "from-pink-500 via-rose-500 to-red-600",
+      description: "Tặng 1 điểm cộng cho người đã giúp đỡ/có ý kiến nhận xét hay với mình.",
+      usageRule: "Báo với giáo viên tên người nhận điểm sau giờ học.",
+      pdfUrl: "",
+      pdfPage: 6
+    },
+    {
+      id: "pc-7",
+      cardFrame: "7.jpg",
+      code: "PWR-07",
+      title: "Power Shutdown",
+      category: "Nhóm Chiến lược",
+      rarity: "UR",
+      icon: "⚡",
+      gradient: "from-slate-700 via-zinc-800 to-neutral-900",
+      description: "Vô hiệu hóa toàn bộ Power Card của cả lớp trong 1 ngày được chọn bí mật.",
+      usageRule: "Nộp thẻ bí mật cho giáo viên trước khi buổi học bắt đầu.",
+      pdfUrl: "",
+      pdfPage: 7
+    },
+    {
+      id: "pc-8",
+      cardFrame: "8.jpg",
+      code: "PWR-08",
+      title: "Power Copy",
+      category: "Nhóm Chiến lược",
+      rarity: "UR",
+      icon: "✨",
+      gradient: "from-violet-500 via-purple-600 to-fuchsia-600",
+      description: "Nhân đôi hiệu lực của một thẻ Power Card khác mà học sinh đang sở hữu.",
+      usageRule: "Kích hoạt cùng lúc với thẻ Power Card muốn nhân đôi.",
+      pdfUrl: "",
+      pdfPage: 8
+    },
+    {
+      id: "pc-9",
+      cardFrame: "9.jpg",
+      code: "PWR-09",
+      title: "Game Designer",
+      category: "Nhóm Chiến lược",
+      rarity: "UR",
+      icon: "🎨",
+      gradient: "from-fuchsia-500 via-purple-600 to-pink-600",
+      description: "Được quyền tự thiết kế 1 thẻ mới (Power hoặc Challenge) với sự đồng ý của giáo viên.",
+      usageRule: "Đề xuất nội dung thẻ mới cho giáo viên duyệt đưa vào hệ thống.",
+      pdfUrl: "",
+      pdfPage: 9
+    },
+    {
+      id: "pc-10",
+      cardFrame: "10.jpg",
+      code: "PWR-10",
+      title: "Classroom DJ",
+      category: "Nhóm Tương tác",
+      rarity: "SSR",
+      icon: "🎧",
+      gradient: "from-teal-400 via-emerald-500 to-green-600",
+      description: "Được quyền bật 1 bài hát nhẹ nhàng đã qua duyệt cho cả lớp nghe khi tự học.",
+      usageRule: "Gửi link bài hát cho giáo viên duyệt trước giờ tự học.",
+      pdfUrl: "",
+      pdfPage: 10
+    },
+    {
+      id: "pc-11",
+      cardFrame: "11.jpg",
+      code: "PWR-11",
+      title: "Secret Whisper",
+      category: "Nhóm Tương tác",
+      rarity: "SR",
+      icon: "💌",
+      gradient: "from-rose-400 via-pink-500 to-purple-500",
+      description: "Gửi một tâm tư, lời nhắn qua giáo viên đến bạn trong lớp.",
+      usageRule: "Viết thư hoặc lời nhắn nhờ giáo viên gửi ẩn danh hoặc công khai.",
+      pdfUrl: "",
+      pdfPage: 11
+    },
+    {
+      id: "pc-12",
+      cardFrame: "12.jpg",
+      code: "PWR-12",
+      title: "Priority Choice",
+      category: "Nhóm Tương tác",
+      rarity: "SR",
+      icon: "🏆",
+      gradient: "from-amber-400 via-yellow-500 to-orange-500",
+      description: "Ưu tiên chọn vị trí hoặc thứ tự trong hoạt động nhóm.",
+      usageRule: "Dùng trước khi giáo viên bốc thăm hoặc chia thứ tự nhóm.",
+      pdfUrl: "",
+      pdfPage: 12
     }
   ],
 
-  // Bộ 3 THẺ THỬ THÁCH (CHALLENGE CARDS)
+  // Bộ 8 THẺ THỬ THÁCH (CHALLENGE CARDS) mẫu từ Mau_The_ChallengeCard_ClassJoy.xlsx
   penaltyCards: [
     {
       id: "pen-1",
-      cardFrame: "4.jpg",
+      cardFrame: "13.jpg",
       code: "CHL-01",
-      title: "Thử thách Truth or Dare",
-      icon: "🎭",
-      gradient: "from-violet-500 via-purple-600 to-indigo-600",
-      description: "Chọn trả lời thật lòng 1 câu hỏi vui của lớp HOẶC biểu diễn 1 tài lẻ nhỏ tại bục giảng.",
-      usageRule: "Hoàn thành trong 3 phút cuối giờ học để mở khóa thẻ.",
+      title: "Homework Collector",
+      category: "Nhóm Hỗ trợ giáo viên",
+      icon: "📚",
+      gradient: "from-amber-500 via-orange-600 to-yellow-600",
+      description: "Giúp thầy cô thu gom bài tập hoặc vở.",
+      usageRule: "Thu và kiểm đếm đủ vở/bài tập của các bạn nộp cho giáo viên.",
       pdfUrl: "",
       pdfPage: 1
     },
     {
       id: "pen-2",
-      cardFrame: "5.jpg",
+      cardFrame: "14.jpg",
       code: "CHL-02",
-      title: "Thử thách Tập trung: Trừ 3 điểm nhắc nhở",
-      icon: "🎯",
-      gradient: "from-slate-700 via-zinc-800 to-neutral-900",
-      description: "Trừ 3 điểm thi đua để nhắc nhở tập trung hơn trong tiết học tiếp theo.",
-      usageRule: "Tự động hoàn thành hoặc giáo viên xác nhận khi học sinh tiến bộ.",
+      title: "Board Cleaner",
+      category: "Nhóm Hỗ trợ giáo viên",
+      icon: "🧹",
+      gradient: "from-emerald-500 via-teal-600 to-cyan-600",
+      description: "Giúp thầy cô xóa bảng trong tiết này (trừ đầu giờ và cuối giờ).",
+      usageRule: "Chủ động lau sạch bảng khi thầy cô viết hết bảng giữa tiết.",
       pdfUrl: "",
       pdfPage: 2
     },
     {
       id: "pen-3",
-      cardFrame: "6.jpg",
+      cardFrame: "15.jpg",
       code: "CHL-03",
-      title: "Thử thách Đồng đội: Biệt đội Sạch Đẹp",
-      icon: "🧹",
-      gradient: "from-amber-500 via-orange-600 to-yellow-600",
-      description: "Cả nhóm/tổ cùng ở lại 5 phút cuối giờ lau bảng, xếp lại bàn ghế ngay ngắn cho lớp học.",
-      usageRule: "Tổ trưởng hoặc giáo viên xác nhận sau khi hoàn thành thử thách.",
+      title: "Homework Challenger",
+      category: "Nhóm Phát triển Bản thân",
+      icon: "📝",
+      gradient: "from-blue-500 via-indigo-600 to-violet-700",
+      description: "Em sẽ làm thêm bài tập về nhà để trở nên giỏi hơn.",
+      usageRule: "Nhận thêm 1 bài tập rèn luyện từ giáo viên và hoàn thành vào buổi sau.",
       pdfUrl: "",
       pdfPage: 3
+    },
+    {
+      id: "pen-4",
+      cardFrame: "16.jpg",
+      code: "CHL-04",
+      title: "Knowledge Connector",
+      category: "Nhóm Phát triển Bản thân",
+      icon: "💡",
+      gradient: "from-amber-400 via-yellow-500 to-emerald-500",
+      description: "Trình bày một kiến thức hoặc một ví dụ thú vị để cả lớp có thể hiểu.",
+      usageRule: "Chuẩn bị ví dụ ngắn 1 phút chia sẻ trước lớp vào cuối tiết hoặc tiết sau.",
+      pdfUrl: "",
+      pdfPage: 4
+    },
+    {
+      id: "pen-5",
+      cardFrame: "17.jpg",
+      code: "CHL-05",
+      title: "The Summary Speaker",
+      category: "Nhóm Phát triển Bản thân",
+      icon: "🎤",
+      gradient: "from-violet-500 via-purple-600 to-indigo-600",
+      description: "Lắng nghe và tổng hợp lại ý chính phần trình bày của nhóm bạn.",
+      usageRule: "Tóm tắt lại 2-3 ý nổi bật của nhóm bạn sau phần thuyết trình.",
+      pdfUrl: "",
+      pdfPage: 5
+    },
+    {
+      id: "pen-6",
+      cardFrame: "18.jpg",
+      code: "CHL-06",
+      title: "Hey My Friend",
+      category: "Nhóm Kỹ năng",
+      icon: "💬",
+      gradient: "from-rose-500 via-pink-600 to-fuchsia-600",
+      description: "Nói/viết thư để gửi lời khen ngợi chân thành một bạn trong lớp.",
+      usageRule: "Nói trực tiếp hoặc gửi mảnh giấy khen ngợi bạn trước lớp.",
+      pdfUrl: "",
+      pdfPage: 6
+    },
+    {
+      id: "pen-7",
+      cardFrame: "19.jpg",
+      code: "CHL-07",
+      title: "Quick Drawing",
+      category: "Nhóm Kỹ năng",
+      icon: "🎨",
+      gradient: "from-cyan-500 via-sky-600 to-blue-700",
+      description: "Vẽ đồ vật chuyên dùng của một nghề nghiệp trong 5 giây để lớp đoán.",
+      usageRule: "Lên bảng vẽ phác thảo đồ vật nhanh trong 5 giây cho cả lớp đoán tên nghề.",
+      pdfUrl: "",
+      pdfPage: 7
+    },
+    {
+      id: "pen-8",
+      cardFrame: "20.jpg",
+      code: "CHL-08",
+      title: "The Reset Routine",
+      category: "Nhóm Kỹ năng",
+      icon: "🧘",
+      gradient: "from-emerald-400 via-teal-500 to-green-600",
+      description: "Dẫn dắt cả lớp vươn vai, hít thở hoặc thả lỏng cơ thể 60 giây giữa giờ.",
+      usageRule: "Đứng trước lớp hô nhịp vươn vai thư giãn 60 giây giữa tiết học.",
+      pdfUrl: "",
+      pdfPage: 8
     }
   ],
 

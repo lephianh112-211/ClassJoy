@@ -196,13 +196,65 @@ function applySavedStudentPasswords(state) {
   });
 }
 
+function getCardCategories(type) {
+  if (typeof CARD_CATEGORIES !== "undefined" && CARD_CATEGORIES[type]) {
+    return CARD_CATEGORIES[type];
+  }
+  if (type === "power") {
+    return ["Nhóm Trợ giúp học tập", "Nhóm Chiến lược", "Nhóm Tương tác"];
+  }
+  return ["Nhóm Hỗ trợ giáo viên", "Nhóm Phát triển Bản thân", "Nhóm Kỹ năng"];
+}
+
+function normalizeCardCategory(rawCat, type, fallbackIdx = 0) {
+  const categories = getCardCategories(type);
+  const clean = String(rawCat || "").trim();
+  if (!clean) {
+    return categories[fallbackIdx % categories.length];
+  }
+  const lower = clean.toLowerCase();
+  // Khớp theo số thứ tự 1, 2, 3
+  if (lower === "1" || lower === "nhóm 1") return categories[0];
+  if (lower === "2" || lower === "nhóm 2") return categories[1];
+  if (lower === "3" || lower === "nhóm 3") return categories[2];
+
+  // Khớp chính xác hoặc không phân biệt hoa thường
+  for (const cat of categories) {
+    const catLower = cat.toLowerCase();
+    const shortCatLower = catLower.replace(/^nhóm\s+/i, "").trim();
+    if (lower === catLower || lower === shortCatLower || lower.includes(shortCatLower) || shortCatLower.includes(lower)) {
+      return cat;
+    }
+  }
+
+  // Khớp theo từ khóa không dấu
+  const noAccent = lower.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d");
+  if (type === "power") {
+    if (noAccent.includes("tro giup") || noAccent.includes("hoc tap")) return categories[0];
+    if (noAccent.includes("chien luoc")) return categories[1];
+    if (noAccent.includes("tuong tac")) return categories[2];
+  } else {
+    if (noAccent.includes("ho tro") || noAccent.includes("giao vien")) return categories[0];
+    if (noAccent.includes("phat trien") || noAccent.includes("ban than")) return categories[1];
+    if (noAccent.includes("ky nang")) return categories[2];
+  }
+
+  return categories[fallbackIdx % categories.length];
+}
+
 function sanitizeCardFrames(state) {
   if (!state) return;
   if (Array.isArray(state.powerCards)) {
-    state.powerCards.forEach((c) => { if (c.cardFrame) c.cardFrame = resolveFrameUrl(c.cardFrame); });
+    state.powerCards.forEach((c, idx) => {
+      if (c.cardFrame) c.cardFrame = resolveFrameUrl(c.cardFrame);
+      c.category = normalizeCardCategory(c.category, "power", idx);
+    });
   }
   if (Array.isArray(state.penaltyCards)) {
-    state.penaltyCards.forEach((c) => { if (c.cardFrame) c.cardFrame = resolveFrameUrl(c.cardFrame); });
+    state.penaltyCards.forEach((c, idx) => {
+      if (c.cardFrame) c.cardFrame = resolveFrameUrl(c.cardFrame);
+      c.category = normalizeCardCategory(c.category, "penalty", idx);
+    });
   }
   if (Array.isArray(state.classes)) {
     state.classes.forEach((cls) => {
@@ -251,6 +303,18 @@ function loadState(user = currentFirebaseUser) {
       const parsed = JSON.parse(raw);
       if (!parsed.pointLineMilestones) {
         parsed.pointLineMilestones = DEFAULT_DATA.pointLineMilestones;
+      }
+      // Đảm bảo tài khoản Demo hoặc tài khoản mới có đầy đủ bộ thẻ mẫu mặc định mới nhất (12 Power Cards & 8 Challenge Cards)
+      if (key === "CLASSJOY_DEMO_STATE") {
+        parsed.powerCards = JSON.parse(JSON.stringify(DEFAULT_DATA.powerCards));
+        parsed.penaltyCards = JSON.parse(JSON.stringify(DEFAULT_DATA.penaltyCards));
+      } else {
+        if (!Array.isArray(parsed.powerCards) || parsed.powerCards.length < DEFAULT_DATA.powerCards.length) {
+          parsed.powerCards = JSON.parse(JSON.stringify(DEFAULT_DATA.powerCards));
+        }
+        if (!Array.isArray(parsed.penaltyCards) || parsed.penaltyCards.length < DEFAULT_DATA.penaltyCards.length) {
+          parsed.penaltyCards = JSON.parse(JSON.stringify(DEFAULT_DATA.penaltyCards));
+        }
       }
       sanitizeCardFrames(parsed);
       return parsed;
@@ -891,7 +955,10 @@ function enterDemoMode() {
   isDemoMode = true;
   currentFirebaseUser = null;
   appState = loadState(null);
+  appState.powerCards = JSON.parse(JSON.stringify(DEFAULT_DATA.powerCards));
+  appState.penaltyCards = JSON.parse(JSON.stringify(DEFAULT_DATA.penaltyCards));
   sanitizeCardFrames(appState);
+  saveState();
   currentClassId = appState.classes[0]?.id || "class-10a1";
   updateTeacherInfoUI("Cô Nguyễn Minh Anh (Demo)", "demo@classjoy.vn", null);
   isSidebarCollapsed = true;
@@ -3214,11 +3281,26 @@ function openRandomCardModal(mode = "power", targetType = "student", preselected
 // ============================================================================
 // HÀM RENDER THẺ BÀI ĐỒ HỌA TỪ FOLDER CARD/ (1.jpg -> 24.jpg)
 // ============================================================================
+function getCategoryBadgeStyle(category, isPower) {
+  const cat = String(category || "").toLowerCase();
+  if (isPower) {
+    if (cat.includes("trợ giúp")) return "bg-sky-100 text-sky-900 border-sky-300";
+    if (cat.includes("chiến lược")) return "bg-amber-100 text-amber-900 border-amber-300";
+    return "bg-fuchsia-100 text-fuchsia-900 border-fuchsia-300";
+  }
+  if (cat.includes("hỗ trợ")) return "bg-emerald-100 text-emerald-900 border-emerald-300";
+  if (cat.includes("phát triển")) return "bg-orange-100 text-orange-900 border-orange-300";
+  return "bg-violet-100 text-violet-900 border-violet-300";
+}
+
 function renderVisualArtCard(card, state = "unused", options = {}) {
   if (!card) return "";
   const isUsed = state === "used";
   const cleanFrame = resolveFrameUrl(card.cardFrame || "1.jpg");
   const isPower = card.type === "power" || (card.id && card.id.startsWith("pc")) || options.type === "power";
+  const cardTypeKey = isPower ? "power" : "penalty";
+  const categoryLabel = card.category || normalizeCardCategory("", cardTypeKey, 0);
+  const shortCatLabel = categoryLabel.replace(/^Nhóm\s+/i, "");
   const maxWidth = options.maxWidth || "230px";
   const showStamp = isUsed;
   const isCompact = parseInt(maxWidth, 10) < 180;
@@ -3227,12 +3309,14 @@ function renderVisualArtCard(card, state = "unused", options = {}) {
     <div class="custom-art-card ${isUsed ? 'opacity-70 grayscale-[0.25]' : ''}" 
          style="background-image: url('${cleanFrame}'), url('Card/${cleanFrame}'); max-width: ${maxWidth};">
       
-      <!-- Top header bar: Mã code (Đã bỏ phần phân loại Cá nhân / Nhóm / Đặc quyền) -->
+      <!-- Top header bar: Mã code & Nhãn phân loại nhóm thẻ -->
       <div class="flex items-center justify-between gap-1 z-10 w-full">
-        <span class="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-slate-900 shadow-sm ${isPower ? 'bg-amber-300 text-slate-950' : 'bg-violet-300 text-slate-950'}">
+        <span class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-slate-900 shadow-sm ${isPower ? 'bg-amber-300 text-slate-950' : 'bg-violet-300 text-slate-950'}">
           ${card.code || (isPower ? 'PWR' : 'CHL')}
         </span>
-        <span class="text-[10px]">${card.icon || (isPower ? '⚡' : '🎯')}</span>
+        <span class="text-[8px] font-black px-2 py-0.5 rounded-full border border-slate-900 bg-white/95 text-slate-900 truncate max-w-[125px]" title="${categoryLabel}">
+          ${shortCatLabel}
+        </span>
       </div>
 
       <!-- Vùng lòng thẻ trắng: Chữ nằm gọn bên trong khung màu trắng của ảnh Card/*.jpg -->
@@ -3258,9 +3342,75 @@ function renderVisualArtCard(card, state = "unused", options = {}) {
   `;
 }
 
+let currentRandomCardCategory = "ALL";
+
+function populateRandomCardCategorySelect(mode) {
+  const select = document.getElementById("random-card-category-select");
+  const countBadge = document.getElementById("random-card-pool-count");
+  const deck = mode === "power" ? (appState.powerCards || []) : (appState.penaltyCards || []);
+  const categories = getCardCategories(mode);
+
+  if (select) {
+    const optionsHtml = [
+      `<option value="ALL">🌟 Tất cả các nhóm thẻ (${deck.length} thẻ)</option>`,
+      ...categories.map((cat) => {
+        const count = deck.filter((c) => normalizeCardCategory(c.category, mode) === cat).length;
+        return `<option value="${cat}">📂 ${cat} (${count} thẻ)</option>`;
+      })
+    ].join("");
+    select.innerHTML = optionsHtml;
+    if (currentRandomCardCategory !== "ALL" && !categories.includes(currentRandomCardCategory)) {
+      currentRandomCardCategory = "ALL";
+    }
+    select.value = currentRandomCardCategory;
+  }
+
+  updateRandomCardPoolCount(mode);
+}
+
+function handleRandomCardCategoryChange(val) {
+  currentRandomCardCategory = val || "ALL";
+  lastDrawnCardTemplate = null;
+  const flipper = document.getElementById("random-card-flipper");
+  if (flipper) flipper.classList.remove("is-flipped");
+  const assignBtn = document.getElementById("btn-assign-drawn-card");
+  if (assignBtn) assignBtn.classList.add("hidden");
+  updateRandomCardPoolCount(currentRandomCardMode);
+}
+
+function getEligibleCardsForRandom(mode = currentRandomCardMode) {
+  const deck = mode === "power" ? (appState.powerCards || []) : (appState.penaltyCards || []);
+  if (!currentRandomCardCategory || currentRandomCardCategory === "ALL") {
+    return deck;
+  }
+  return deck.filter((c) => normalizeCardCategory(c.category, mode) === currentRandomCardCategory);
+}
+
+function updateRandomCardPoolCount(mode = currentRandomCardMode) {
+  const countBadge = document.getElementById("random-card-pool-count");
+  const spinBtn = document.getElementById("btn-spin-card");
+  const pool = getEligibleCardsForRandom(mode);
+  if (countBadge) {
+    if (pool.length === 0) {
+      countBadge.className = "text-[11px] font-black text-rose-700 bg-rose-100 px-2.5 py-0.5 rounded-lg border border-rose-300";
+      countBadge.textContent = "⚠️ 0 thẻ trong nhóm này";
+    } else {
+      countBadge.className = "text-[11px] font-black text-indigo-700 bg-white px-2.5 py-0.5 rounded-lg border border-indigo-200";
+      countBadge.textContent = `Đang có ${pool.length} thẻ phù hợp`;
+    }
+  }
+  if (spinBtn && !isSpinningRandomCard) {
+    if (pool.length === 0) {
+      spinBtn.classList.add("opacity-60");
+    } else {
+      spinBtn.classList.remove("opacity-60");
+    }
+  }
+}
 
 function setRandomCardMode(mode) {
   currentRandomCardMode = mode;
+  currentRandomCardCategory = "ALL";
   lastDrawnCardTemplate = null;
   const assignBtn = document.getElementById("btn-assign-drawn-card");
   if (assignBtn) assignBtn.classList.add("hidden");
@@ -3299,6 +3449,8 @@ function setRandomCardMode(mode) {
     }
     if (badge) badge.textContent = "🎯 Vòng Quay Bốc Challenge Card";
   }
+
+  populateRandomCardCategorySelect(mode);
 }
 
 let isSpinningRandomCard = false;
@@ -3306,10 +3458,9 @@ let isSpinningRandomCard = false;
 function spinRandomCard() {
   if (isSpinningRandomCard) return;
 
-  const deck =
-    currentRandomCardMode === "power" ? appState.powerCards : appState.penaltyCards;
+  const deck = getEligibleCardsForRandom(currentRandomCardMode);
   if (!deck || deck.length === 0) {
-    showToast("⚠️ Bộ thẻ này hiện đang trống!", "rose");
+    showToast("⚠️ Nhóm thẻ này hiện chưa có thẻ nào! Vui lòng chọn nhóm khác hoặc thêm thẻ.", "rose");
     return;
   }
 
@@ -3339,7 +3490,7 @@ function spinRandomCard() {
 
   setTimeout(() => {
     try {
-      // Chọn thẻ ngẫu nhiên (nếu có >1 thẻ, ưu tiên bốc thẻ mới hoặc ngẫu nhiên đều)
+      // Chọn thẻ ngẫu nhiên trong nhóm đã lọc
       let candidate = deck[Math.floor(Math.random() * deck.length)];
       if (deck.length > 1 && lastDrawnCardTemplate && candidate.id === lastDrawnCardTemplate.id && Math.random() < 0.7) {
         const others = deck.filter((c) => c.id !== lastDrawnCardTemplate.id);
@@ -3464,28 +3615,84 @@ function confirmAssignDrawnCard() {
 // ----------------------------------------------------------------------------
 // 13. KHO THẺ POWER CARD & CHALLENGE CARD
 // ----------------------------------------------------------------------------
+let currentPowerDeckCategoryFilter = "ALL";
+let currentPenaltyDeckCategoryFilter = "ALL";
+
+function setDeckCategoryFilter(type, category) {
+  if (type === "power") {
+    currentPowerDeckCategoryFilter = category;
+  } else {
+    currentPenaltyDeckCategoryFilter = category;
+  }
+  renderCardDecks();
+}
+
+function renderDeckCategoryFilterButtons(type) {
+  const isPower = type === "power";
+  const container = document.getElementById(isPower ? "power-deck-category-filters" : "penalty-deck-category-filters");
+  if (!container) return;
+
+  const deck = isPower ? (appState.powerCards || []) : (appState.penaltyCards || []);
+  const categories = getCardCategories(type);
+  const activeFilter = isPower ? currentPowerDeckCategoryFilter : currentPenaltyDeckCategoryFilter;
+  const allItems = ["ALL", ...categories];
+
+  container.innerHTML = allItems
+    .map((cat) => {
+      const isActive = cat === activeFilter;
+      const count = cat === "ALL"
+        ? deck.length
+        : deck.filter((c) => normalizeCardCategory(c.category, type) === cat).length;
+      const label = cat === "ALL" ? `Tất cả (${count})` : `${cat} (${count})`;
+      return `<button type="button" onclick="setDeckCategoryFilter('${type}', '${cat}')"
+        class="px-3 py-1.5 rounded-xl text-xs font-black transition ${
+          isActive
+            ? (isPower ? "bg-amber-400 text-slate-950 border-2 border-slate-900 shadow-[0_2px_0_#1e293b]" : "bg-violet-400 text-slate-950 border-2 border-slate-900 shadow-[0_2px_0_#1e293b]")
+            : "bg-slate-100 text-slate-700 border-2 border-transparent hover:border-slate-300"
+        }">${label}</button>`;
+    })
+    .join("");
+}
+
 function renderCardDecks() {
+  renderDeckCategoryFilterButtons("power");
+  renderDeckCategoryFilterButtons("penalty");
+
   const powerGrid = document.getElementById("power-cards-deck-grid");
   if (powerGrid) {
-    powerGrid.innerHTML = appState.powerCards
-      .map((card) => renderSingleDeckCardHtml(card, "power"))
-      .join("");
+    const filteredPower = (appState.powerCards || []).filter(
+      (c) => currentPowerDeckCategoryFilter === "ALL" || normalizeCardCategory(c.category, "power") === currentPowerDeckCategoryFilter
+    );
+    powerGrid.innerHTML = filteredPower.length > 0
+      ? filteredPower.map((card) => renderSingleDeckCardHtml(card, "power")).join("")
+      : `<div class="col-span-full bg-white rounded-3xl p-8 text-center border-2 border-dashed border-slate-300 text-xs font-bold text-slate-400">Chưa có thẻ Power Card nào thuộc phân loại "${currentPowerDeckCategoryFilter}".</div>`;
   }
 
   const penaltyGrid = document.getElementById("penalty-cards-deck-grid");
   if (penaltyGrid) {
-    penaltyGrid.innerHTML = appState.penaltyCards
-      .map((card) => renderSingleDeckCardHtml(card, "penalty"))
-      .join("");
+    const filteredPenalty = (appState.penaltyCards || []).filter(
+      (c) => currentPenaltyDeckCategoryFilter === "ALL" || normalizeCardCategory(c.category, "penalty") === currentPenaltyDeckCategoryFilter
+    );
+    penaltyGrid.innerHTML = filteredPenalty.length > 0
+      ? filteredPenalty.map((card) => renderSingleDeckCardHtml(card, "penalty")).join("")
+      : `<div class="col-span-full bg-white rounded-3xl p-8 text-center border-2 border-dashed border-slate-300 text-xs font-bold text-slate-400">Chưa có thẻ Challenge Card nào thuộc phân loại "${currentPenaltyDeckCategoryFilter}".</div>`;
   }
 }
 
 function renderSingleDeckCardHtml(card, type) {
   const isPower = type === "power";
+  const categoryLabel = normalizeCardCategory(card.category, type);
+  const badgeStyle = getCategoryBadgeStyle(categoryLabel, isPower);
   const visualCard = renderVisualArtCard(card, "unused", { maxWidth: "230px", type });
 
   return `
     <div class="game-card-pop flex flex-col justify-between items-center p-5 bg-white">
+      <div class="w-full flex items-center justify-between gap-2 mb-1">
+        <span class="px-2.5 py-0.5 rounded-full border text-[11px] font-black ${badgeStyle}">
+          📂 ${categoryLabel}
+        </span>
+        <span class="text-[11px] font-black text-slate-400">${card.code}</span>
+      </div>
       <div class="w-full flex justify-center py-2">
         ${visualCard}
       </div>
@@ -3502,6 +3709,17 @@ function renderSingleDeckCardHtml(card, type) {
       </div>
     </div>
   `;
+}
+
+function populateCardEditorCategorySelect(type, selectedCategory = "") {
+  const select = document.getElementById("edit-card-category");
+  if (!select) return;
+  const categories = getCardCategories(type);
+  const normalized = normalizeCardCategory(selectedCategory, type, 0);
+  select.innerHTML = categories
+    .map((cat) => `<option value="${cat}" ${cat === normalized ? "selected" : ""}>${cat}</option>`)
+    .join("");
+  select.value = normalized;
 }
 
 function populateCardFramePicker() {
@@ -3555,6 +3773,7 @@ function updateCardEditorPreview() {
   const name = document.getElementById("edit-card-name")?.value.trim() || (isPower ? "Tên Thẻ Power Card" : "Tên Challenge Card");
   const icon = document.getElementById("edit-card-icon")?.value.trim() || (isPower ? "⚡" : "🎯");
   const code = document.getElementById("edit-card-code")?.value.trim().toUpperCase() || (isPower ? "PWR-01" : "CHL-01");
+  const category = document.getElementById("edit-card-category")?.value || normalizeCardCategory("", type, 0);
   const desc = document.getElementById("edit-card-desc")?.value.trim() || "Nội dung quyền năng hoặc thử thách của thẻ do giáo viên soạn thảo sẽ hiển thị ngay tại đây...";
   const frame = resolveFrameUrl(document.getElementById("edit-card-frame")?.value || (isPower ? "1.jpg" : "4.jpg"));
 
@@ -3562,6 +3781,7 @@ function updateCardEditorPreview() {
     id: "preview",
     type,
     code,
+    category,
     title: name,
     icon,
     description: desc,
@@ -3584,6 +3804,7 @@ function openCreateCardModal(type) {
       ? `PWR-${String(appState.powerCards.length + 1).padStart(2, "0")}`
       : `CHL-${String(appState.penaltyCards.length + 1).padStart(2, "0")}`;
   document.getElementById("edit-card-desc").value = "";
+  populateCardEditorCategorySelect(type, "");
 
   // Chọn sẵn ngẫu nhiên 1 trong 24 phôi thẻ khi mở tạo thẻ mới
   const rawFrames = typeof AVAILABLE_CARD_FRAMES !== "undefined" && AVAILABLE_CARD_FRAMES.length > 0
@@ -3609,6 +3830,7 @@ function openEditCardModal(cardId, type) {
   document.getElementById("edit-card-icon").value = card.icon;
   document.getElementById("edit-card-code").value = card.code;
   document.getElementById("edit-card-desc").value = card.description;
+  populateCardEditorCategorySelect(type, card.category);
   const rawFrame = card.cardFrame || (isPower ? "1.jpg" : "4.jpg");
   document.getElementById("edit-card-frame").value = resolveFrameUrl(rawFrame);
 
@@ -3624,6 +3846,7 @@ function handleSaveCardTemplate(e) {
   const title = document.getElementById("edit-card-name").value.trim();
   const icon = document.getElementById("edit-card-icon").value.trim() || "🃏";
   const code = document.getElementById("edit-card-code").value.trim().toUpperCase();
+  const category = normalizeCardCategory(document.getElementById("edit-card-category")?.value, type, 0);
   const description = document.getElementById("edit-card-desc").value.trim();
   const cardFrame = resolveFrameUrl(document.getElementById("edit-card-frame").value.trim() || "1.jpg");
 
@@ -3635,16 +3858,15 @@ function handleSaveCardTemplate(e) {
       existing.title = title;
       existing.icon = icon;
       existing.code = code;
+      existing.category = category;
       existing.description = description;
       existing.cardFrame = cardFrame;
-      delete existing.category;
-      delete existing.scope;
-      delete existing.costPoints;
     }
   } else {
     targetDeck.push({
       id: (type === "power" ? "pc-" : "pen-") + Date.now(),
       code,
+      category,
       title,
       icon,
       description,
@@ -3655,7 +3877,7 @@ function handleSaveCardTemplate(e) {
   saveState();
   renderCardDecks();
   closeModal("card-editor-modal");
-  showToast(`💾 Đã lưu thẻ "${title}" thành công!`, "emerald");
+  showToast(`💾 Đã lưu thẻ "${title}" (${category}) thành công!`, "emerald");
 }
 
 function deleteCardTemplate(cardId, type) {
@@ -4643,6 +4865,7 @@ function setBulkCardImportType(type) {
   const badge = document.getElementById("bulk-cards-modal-badge");
   const title = document.getElementById("bulk-cards-modal-title");
   const submitBtn = document.getElementById("btn-confirm-bulk-cards");
+  const hintEl = document.getElementById("bulk-cards-category-hint");
 
   if (type === "power") {
     if (btnPower) {
@@ -4659,6 +4882,9 @@ function setBulkCardImportType(type) {
       submitBtn.className = "pop-btn pop-btn-yellow px-6 py-2.5 rounded-xl text-xs font-black";
       submitBtn.textContent = "⚡ Sinh & Lưu Vào Kho Power Card";
     }
+    if (hintEl) {
+      hintEl.innerHTML = `• <strong>3 nhóm Power Card</strong>: <code class="bg-white px-1.5 py-0.5 rounded border border-indigo-200">Nhóm Trợ giúp học tập</code>, <code class="bg-white px-1.5 py-0.5 rounded border border-indigo-200">Nhóm Chiến lược</code>, <code class="bg-white px-1.5 py-0.5 rounded border border-indigo-200">Nhóm Tương tác</code>`;
+    }
   } else {
     if (btnPenalty) {
       btnPenalty.className =
@@ -4673,6 +4899,9 @@ function setBulkCardImportType(type) {
     if (submitBtn) {
       submitBtn.className = "pop-btn pop-btn-violet px-6 py-2.5 rounded-xl text-xs font-black";
       submitBtn.textContent = "🎯 Sinh & Lưu Vào Kho Challenge Card";
+    }
+    if (hintEl) {
+      hintEl.innerHTML = `• <strong>3 nhóm Challenge Card</strong>: <code class="bg-white px-1.5 py-0.5 rounded border border-indigo-200">Nhóm Hỗ trợ giáo viên</code>, <code class="bg-white px-1.5 py-0.5 rounded border border-indigo-200">Nhóm Phát triển Bản thân</code>, <code class="bg-white px-1.5 py-0.5 rounded border border-indigo-200">Nhóm Kỹ năng</code>`;
     }
   }
 
@@ -4689,19 +4918,19 @@ function fillSampleCardsImport() {
   let sample = "";
   if (currentBulkCardType === "power") {
     sample = [
-      "Đổi câu hỏi miệng | Được quyền yêu cầu đổi câu hỏi kiểm tra miệng khác 1 lần duy nhất",
-      "Chọn chỗ ngồi 1 tuần | Được tự chọn chỗ ngồi yêu thích trong lớp suốt cả tuần học",
-      "Trợ giúp đồng đội | Được gọi 1 bạn trong bàn trợ giúp câu trả lời khi đang đứng phát biểu",
-      "Tia chớp cứu nguy | Được miễn 1 lần trừ điểm bài tập về nhà khi có lý do chính đáng",
-      "Ngôi sao may mắn | Tự động nhân đôi điểm cộng phát biểu trong tiết học này"
+      "Đổi câu hỏi miệng | Được quyền yêu cầu đổi câu hỏi kiểm tra miệng khác 1 lần duy nhất | Nhóm Trợ giúp học tập",
+      "Chọn chỗ ngồi 1 tuần | Được tự chọn chỗ ngồi yêu thích trong lớp suốt cả tuần học | Nhóm Chiến lược",
+      "Trợ giúp đồng đội | Được gọi 1 bạn trong bàn trợ giúp câu trả lời khi đang đứng phát biểu | Nhóm Tương tác",
+      "Tia chớp cứu nguy | Được miễn 1 lần trừ điểm bài tập về nhà khi có lý do chính đáng | Nhóm Trợ giúp học tập",
+      "Ngôi sao may mắn | Tự động nhân đôi điểm cộng phát biểu trong tiết học này | Nhóm Chiến lược"
     ].join("\n");
   } else {
     sample = [
-      "Thử thách Toán vui | Giải nhanh 1 câu đố logic toán học trong 1 phút tại bục giảng",
-      "Hát hoặc Đọc thơ | Hát 1 bài hát hoặc đọc 4 câu thơ tặng cả lớp vào 3 phút cuối giờ",
-      "Vệ sinh bảng phấn | Cùng tổ trưởng lau sạch bảng và xếp lại phấn ngay ngắn cuối giờ",
-      "Khởi động thể lực | Thực hiện 10 lần vươn vai nhảy tại chỗ để tái tạo năng lượng",
-      "Thuyết trình 1 phút | Kể lại 1 kiến thức thú vị em vừa học được cho cả lớp nghe"
+      "Vệ sinh bảng phấn | Cùng tổ trưởng lau sạch bảng và xếp lại phấn ngay ngắn cuối giờ | Nhóm Hỗ trợ giáo viên",
+      "Khởi động thể lực | Thực hiện 10 lần vươn vai nhảy tại chỗ để tái tạo năng lượng | Nhóm Phát triển Bản thân",
+      "Thuyết trình 1 phút | Kể lại 1 kiến thức thú vị em vừa học được cho cả lớp nghe | Nhóm Kỹ năng",
+      "Thử thách Toán vui | Giải nhanh 1 câu đố logic toán học trong 1 phút tại bục giảng | Nhóm Kỹ năng",
+      "Hát hoặc Đọc thơ | Hát 1 bài hát hoặc đọc 4 câu thơ tặng cả lớp vào 3 phút cuối giờ | Nhóm Phát triển Bản thân"
     ].join("\n");
   }
 
@@ -4716,25 +4945,25 @@ function downloadCardExcelTemplate() {
   const isPower = currentBulkCardType === "power";
   const rows = isPower
     ? [
-        ["Tên thẻ", "Nội dung quyền năng / Đặc quyền", "Mã thẻ (Trống = Tự sinh)", "Phôi ảnh (1-24, Trống = Ngẫu nhiên)"],
-        ["Đổi câu hỏi miệng", "Được yêu cầu đổi câu hỏi kiểm tra miệng khác 1 lần duy nhất", "PWR-04", "5"],
-        ["Chọn chỗ ngồi 1 tuần", "Được tự chọn chỗ ngồi yêu thích trong lớp suốt cả tuần học", "PWR-05", "12"],
-        ["Ngôi sao may mắn", "Tự động nhân đôi điểm cộng phát biểu trong tiết học này", "", ""]
+        ["Tên thẻ", "Nội dung quyền năng / Đặc quyền", "Phân loại nhóm thẻ (Nhóm Trợ giúp học tập / Nhóm Chiến lược / Nhóm Tương tác)", "Mã thẻ (Trống = Tự sinh)", "Phôi ảnh (1-24, Trống = Ngẫu nhiên)"],
+        ["Đổi câu hỏi miệng", "Được yêu cầu đổi câu hỏi kiểm tra miệng khác 1 lần duy nhất", "Nhóm Trợ giúp học tập", "PWR-04", "5"],
+        ["Chọn chỗ ngồi 1 tuần", "Được tự chọn chỗ ngồi yêu thích trong lớp suốt cả tuần học", "Nhóm Chiến lược", "PWR-05", "12"],
+        ["Trợ giúp đồng đội", "Được gọi 1 bạn trong bàn trợ giúp câu trả lời khi đang đứng phát biểu", "Nhóm Tương tác", "", ""]
       ]
     : [
-        ["Tên thẻ", "Nội dung thử thách / Câu hỏi", "Mã thẻ (Trống = Tự sinh)", "Phôi ảnh (1-24, Trống = Ngẫu nhiên)"],
-        ["Thử thách Toán vui", "Giải nhanh 1 câu đố logic toán học trong 1 phút tại bục giảng", "CHL-04", "8"],
-        ["Hát hoặc Đọc thơ", "Hát 1 bài hát hoặc đọc 4 câu thơ tặng cả lớp cuối giờ", "CHL-05", "15"],
-        ["Thuyết trình 1 phút", "Kể lại 1 kiến thức thú vị em vừa học được cho cả lớp nghe", "", ""]
+        ["Tên thẻ", "Nội dung thử thách / Câu hỏi", "Phân loại nhóm thẻ (Nhóm Hỗ trợ giáo viên / Nhóm Phát triển Bản thân / Nhóm Kỹ năng)", "Mã thẻ (Trống = Tự sinh)", "Phôi ảnh (1-24, Trống = Ngẫu nhiên)"],
+        ["Vệ sinh bảng phấn", "Cùng tổ trưởng lau sạch bảng và xếp lại phấn ngay ngắn cuối giờ", "Nhóm Hỗ trợ giáo viên", "CHL-04", "8"],
+        ["Khởi động thể lực", "Thực hiện 10 lần vươn vai nhảy tại chỗ để tái tạo năng lượng", "Nhóm Phát triển Bản thân", "CHL-05", "15"],
+        ["Thuyết trình 1 phút", "Kể lại 1 kiến thức thú vị em vừa học được cho cả lớp nghe", "Nhóm Kỹ năng", "", ""]
       ];
 
   if (typeof XLSX !== "undefined") {
     const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws["!cols"] = [{ wch: 24 }, { wch: 52 }, { wch: 22 }, { wch: 30 }];
+    ws["!cols"] = [{ wch: 24 }, { wch: 52 }, { wch: 36 }, { wch: 22 }, { wch: 30 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "DanhSachThe");
     XLSX.writeFile(wb, isPower ? "Mau_The_PowerCard_ClassJoy.xlsx" : "Mau_The_ChallengeCard_ClassJoy.xlsx");
-    showToast("📥 Đã tải xuống file Excel mẫu danh sách thẻ bài!", "emerald");
+    showToast("📥 Đã tải xuống file Excel mẫu danh sách thẻ bài (kèm cột Phân loại)!", "emerald");
   } else {
     showToast("⚠️ Thư viện Excel đang tải, vui lòng thử lại sau giây lát!", "amber");
   }
@@ -4745,7 +4974,7 @@ function handleCardFileUpload(e) {
   if (!file) return;
   const ext = (file.name.split(".").pop() || "").toLowerCase();
 
-  if ((ext === "xlsx" || ext === "xls") && typeof XLSX !== "undefined") {
+  if ((ext === "xlsx" || ext === "xls" || ext === "csv") && typeof XLSX !== "undefined") {
     const reader = new FileReader();
     reader.onload = function(evt) {
       try {
@@ -4753,19 +4982,92 @@ function handleCardFileUpload(e) {
         const workbook = XLSX.read(data, { type: "array" });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
-        const lines = [];
-        rows.forEach((row, rIdx) => {
-          if (!Array.isArray(row) || row.length === 0) return;
-          const col0 = String(row[0] ?? "").trim();
-          const col1 = String(row[1] ?? "").trim();
-          if (!col0 && !col1) return;
-          if (rIdx === 0 && /^(tên thẻ|tiêu đề|stt|title|card name)/i.test(col0)) {
-            return;
+
+        if (!rows || rows.length === 0) {
+          showToast("⚠️ File Excel không có dữ liệu!", "rose");
+          return;
+        }
+
+        // Nhận diện dòng tiêu đề cột thông minh
+        let headerRowIdx = -1;
+        let colTitle = -1;
+        let colDesc = -1;
+        let colCat = -1;
+        let colCode = -1;
+        let colFrame = -1;
+
+        for (let r = 0; r < Math.min(5, rows.length); r++) {
+          const row = rows[r];
+          if (!Array.isArray(row)) continue;
+          for (let c = 0; c < row.length; c++) {
+            const val = String(row[c] ?? "").trim().toLowerCase();
+            if (!val) continue;
+            if (colTitle === -1 && /^(tên\s*thẻ|tiêu\s*đề|tên|title|card\s*name)$/i.test(val)) {
+              colTitle = c;
+              headerRowIdx = r;
+            } else if (colDesc === -1 && /^(nội\s*dung|mô\s*tả|quyền\s*năng|thử\s*thách|description)/i.test(val)) {
+              colDesc = c;
+              headerRowIdx = r;
+            } else if (colCat === -1 && /^(phân\s*loại|nhóm\s*thẻ|loại\s*thẻ|nhóm|category|type)/i.test(val)) {
+              colCat = c;
+              headerRowIdx = r;
+            } else if (colCode === -1 && /^(mã\s*thẻ|mã|code)/i.test(val)) {
+              colCode = c;
+              headerRowIdx = r;
+            } else if (colFrame === -1 && /^(phôi\s*ảnh|phôi|ảnh|frame)/i.test(val)) {
+              colFrame = c;
+              headerRowIdx = r;
+            }
           }
-          const col2 = String(row[2] ?? "").trim();
-          const col3 = String(row[3] ?? "").trim();
-          lines.push([col0, col1, col2, col3].filter((x, i) => i <= 1 || x !== "").join(" | "));
-        });
+          if (colTitle !== -1) break;
+        }
+
+        const lines = [];
+        const startRow = headerRowIdx >= 0 ? headerRowIdx + 1 : 0;
+
+        for (let r = startRow; r < rows.length; r++) {
+          const row = rows[r];
+          if (!Array.isArray(row) || row.length === 0) continue;
+
+          let title = "";
+          let desc = "";
+          let cat = "";
+          let code = "";
+          let frame = "";
+
+          if (colTitle !== -1) {
+            title = String(row[colTitle] ?? "").trim();
+            desc = colDesc !== -1 ? String(row[colDesc] ?? "").trim() : title;
+            cat = colCat !== -1 ? String(row[colCat] ?? "").trim() : "";
+            code = colCode !== -1 ? String(row[colCode] ?? "").trim() : "";
+            frame = colFrame !== -1 ? String(row[colFrame] ?? "").trim() : "";
+          } else {
+            const col0 = String(row[0] ?? "").trim();
+            const col1 = String(row[1] ?? "").trim();
+            const col2 = String(row[2] ?? "").trim();
+            const col3 = String(row[3] ?? "").trim();
+            const col4 = String(row[4] ?? "").trim();
+            if (!col0 && !col1) continue;
+            if (r === 0 && /^(tên\s*thẻ|tiêu\s*đề|stt|title|card\s*name)/i.test(col0)) continue;
+
+            title = col0;
+            desc = col1 || col0;
+            // Nếu cột 2 có dạng mã thẻ PWR-xx / CHL-xx (file mẫu 4 cột cũ) thì tự nhận diện
+            if (/^(PWR|CHL|PC|PEN)-?\d+$/i.test(col2)) {
+              cat = "";
+              code = col2;
+              frame = col3;
+            } else {
+              cat = col2;
+              code = col3;
+              frame = col4;
+            }
+          }
+
+          if (!title || /^(tên\s*thẻ|tiêu\s*đề|stt)$/i.test(title)) continue;
+          lines.push(`${title} | ${desc} | ${cat} | ${code} | ${frame}`);
+        }
+
         const input = document.getElementById("bulk-cards-input");
         if (input) {
           input.value = lines.join("\n");
@@ -4826,6 +5128,7 @@ function parseCardImportText(text, type) {
 
     let title = "";
     let desc = "";
+    let rawCategory = "";
     let customCode = "";
     let customFrameRaw = "";
 
@@ -4835,11 +5138,25 @@ function parseCardImportText(text, type) {
     } else {
       title = parts[0];
       desc = parts[1] || parts[0];
-      customCode = (parts[2] || "").toUpperCase();
-      customFrameRaw = (parts[3] || "").trim();
+      const p2 = (parts[2] || "").trim();
+      const p3 = (parts[3] || "").trim();
+      const p4 = (parts[4] || "").trim();
+
+      // Tương thích cả định dạng 5 cột mới (Tên | Nội dung | Phân loại | Mã thẻ | Phôi) lẫn 4 cột cũ
+      if (/^(PWR|CHL|PC|PEN)-?\d+$/i.test(p2) && !p4) {
+        rawCategory = "";
+        customCode = p2.toUpperCase();
+        customFrameRaw = p3;
+      } else {
+        rawCategory = p2;
+        customCode = p3.toUpperCase();
+        customFrameRaw = p4;
+      }
     }
 
-    if (!title || /^(tên thẻ|tiêu đề)$/i.test(title)) return;
+    if (!title || /^(tên\s*thẻ|tiêu\s*đề)$/i.test(title)) return;
+
+    const category = normalizeCardCategory(rawCategory, type, idx);
 
     let chosenFrame = frames[Math.floor(Math.random() * frames.length)];
     if (customFrameRaw) {
@@ -4861,6 +5178,7 @@ function parseCardImportText(text, type) {
       type,
       title,
       description: desc,
+      category,
       code,
       cardFrame: chosenFrame,
       icon: randomIcon
@@ -4887,13 +5205,15 @@ function previewBulkCards() {
 
   if (list) {
     if (parsed.length === 0) {
-      list.innerHTML = `<div class="text-slate-400 text-center py-4 font-bold italic">Chưa có thẻ nào. Hãy dán danh sách thẻ hoặc bấm "📋 Dán mẫu thẻ".</div>`;
+      list.innerHTML = `<div class="text-slate-400 text-center py-4 font-bold italic">Chưa có thẻ nào. Hãy tải file Excel lên hoặc bấm "📋 Dán mẫu thẻ".</div>`;
       return;
     }
 
     list.innerHTML = parsed
       .map(
-        (c, idx) => `
+        (c, idx) => {
+          const catBadgeStyle = getCategoryBadgeStyle(c.category, isPower);
+          return `
         <div class="p-2.5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between gap-3 shadow-xs">
           <div class="flex items-center gap-3 min-w-0">
             <span class="w-6 h-6 rounded-md bg-slate-100 text-slate-700 font-black text-[11px] flex items-center justify-center shrink-0">
@@ -4905,9 +5225,12 @@ function previewBulkCards() {
               </span>
             </div>
             <div class="min-w-0">
-              <div class="flex items-center gap-1.5">
+              <div class="flex flex-wrap items-center gap-1.5">
                 <span class="px-2 py-0.5 rounded-md ${isPower ? "bg-amber-300 text-slate-950" : "bg-violet-300 text-slate-950"} border border-slate-900 text-[10px] font-black uppercase">
                   ${c.code}
+                </span>
+                <span class="px-2 py-0.5 rounded-full border text-[10px] font-black ${catBadgeStyle}">
+                  📂 ${c.category}
                 </span>
                 <span class="font-black text-xs text-slate-900 truncate">${c.icon} ${c.title}</span>
               </div>
@@ -4918,7 +5241,8 @@ function previewBulkCards() {
             Phôi ${c.cardFrame.replace('Card/', '')}
           </span>
         </div>
-      `
+      `;
+        }
       )
       .join("");
   }
@@ -4940,6 +5264,7 @@ function confirmBulkImportCards() {
     targetDeck.push({
       id: (isPower ? "pc-" : "pen-") + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
       code: c.code,
+      category: c.category,
       title: c.title,
       icon: c.icon,
       description: c.description,
