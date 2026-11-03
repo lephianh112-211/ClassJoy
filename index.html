@@ -181,7 +181,7 @@
         
         <!-- Logo & Thông tin giáo viên -->
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl bg-amber-400 border-2 border-slate-900 flex items-center justify-center text-xl font-black shadow-[0_3px_0_#1e293b]">
+          <div class="w-10 h-10 rounded-2xl bg-amber-400 border-2 border-slate-800 flex items-center justify-center text-xl font-black shadow-[0_3px_0_#1e293b]">
             ⚡
           </div>
           <div>
@@ -190,7 +190,13 @@
               <span id="role-badge" class="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">Giáo viên</span>
               <span id="cloud-badge" class="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300">☁️ Đã đồng bộ</span>
             </div>
-            <p id="teacher-info-bar" class="text-xs font-bold text-slate-500">Giáo viên • ClassJoy</p>
+            <div class="flex items-center gap-1.5 mt-0.5">
+              <p id="teacher-info-bar" class="text-xs font-bold text-slate-600">Giáo viên • ClassJoy</p>
+              <button id="edit-teacher-profile-btn" type="button" onclick="openEditTeacherModal()" title="Chỉnh sửa thông tin giáo viên"
+                class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-amber-100 border border-slate-300 hover:border-slate-700 text-[10px] font-black text-slate-700 transition inline-flex items-center gap-1">
+                <span>✏️ Sửa</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -887,7 +893,7 @@
 
   <!-- MODAL 1: CHI TIẾT HỌC SINH -->
   <div id="student-detail-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-4xl w-full max-h-[92vh] overflow-y-auto border-2 border-slate-900 shadow-[0_12px_0_#1e293b] animate-pop">
+    <div class="relative bg-white rounded-3xl max-w-4xl w-full max-h-[92vh] overflow-y-auto border-2 border-slate-800 shadow-[0_12px_0_#1e293b] animate-pop">
       <div id="student-modal-content" class="p-6 sm:p-8"></div>
     </div>
   </div>
@@ -1142,8 +1148,14 @@
             <div>
               <label class="block text-xs font-black text-slate-700 mb-1">Biểu tượng</label>
               <input id="edit-card-icon" type="text" value="⚡" required oninput="updateCardEditorPreview()"
-                class="w-full px-3 py-2 rounded-xl border-2 border-slate-300 text-center text-sm font-black outline-none focus:border-slate-900" />
+                class="w-full px-3 py-2 rounded-xl border-2 border-slate-300 text-center text-base font-black outline-none focus:border-slate-900 bg-amber-50/40" />
             </div>
+          </div>
+
+          <!-- Bảng chọn nhanh Biểu tượng thẻ bài 1 chạm -->
+          <div>
+            <label class="block text-[11px] font-black text-slate-600 mb-1">✨ Bấm chọn nhanh biểu tượng thẻ:</label>
+            <div id="card-icon-picker" class="flex flex-wrap items-center gap-1.5 p-2 rounded-xl bg-slate-50 border border-slate-200 max-h-28 overflow-y-auto"></div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -1206,10 +1218,10 @@
 
   <!-- MODAL 6: THÊM HỌC SINH MỚI -->
   <div id="add-student-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 border-2 border-slate-900 shadow-[0_12px_0_#1e293b] animate-pop">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 border-2 border-slate-800 shadow-[0_12px_0_#1e293b] max-h-[92vh] overflow-y-auto animate-pop">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-black text-slate-900">+ Thêm Học Sinh Mới</h3>
-        <button onclick="closeModal('add-student-modal')" class="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-100 text-slate-900 font-black">✕</button>
+        <button onclick="closeModal('add-student-modal')" class="w-8 h-8 rounded-full border-2 border-slate-800 bg-slate-100 hover:bg-rose-100 text-slate-900 font-black">✕</button>
       </div>
       <form onsubmit="handleCreateStudent(event)" class="space-y-3.5">
         <div>
@@ -1233,31 +1245,23 @@
         <div class="px-3 py-2 rounded-xl bg-indigo-50 border border-indigo-200 text-[11px] font-bold text-indigo-900 flex items-center justify-between">
           <span>👤 Tài khoản tự tạo cho con: <strong id="new-student-username-preview" class="font-black text-indigo-700">10a1-11</strong></span>
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-black text-slate-700 mb-1">Nhóm / Tổ</label>
-            <select id="new-student-group"
-              class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 text-sm font-black outline-none">
-              <option value="Nhóm 1">Nhóm 1</option>
-              <option value="Nhóm 2">Nhóm 2</option>
-              <option value="Nhóm 3">Nhóm 3</option>
-              <option value="Nhóm 4">Nhóm 4</option>
-            </select>
+        <div>
+          <label class="block text-xs font-black text-slate-700 mb-1">Nhóm / Tổ</label>
+          <select id="new-student-group"
+            class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 text-sm font-black outline-none">
+            <option value="Nhóm 1">Nhóm 1</option>
+            <option value="Nhóm 2">Nhóm 2</option>
+            <option value="Nhóm 3">Nhóm 3</option>
+            <option value="Nhóm 4">Nhóm 4</option>
+          </select>
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-xs font-black text-slate-700">Chọn Avatar nhân vật (40+ biểu tượng):</label>
+            <span id="new-student-selected-avatar-preview" class="text-2xl bg-amber-100 px-2.5 py-0.5 rounded-xl border border-slate-400">🦖</span>
           </div>
-          <div>
-            <label class="block text-xs font-black text-slate-700 mb-1">Chọn Avatar nhân vật</label>
-            <select id="new-student-avatar"
-              class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 text-sm font-bold outline-none">
-              <option value="🦖">🦖 Khủng long</option>
-              <option value="🦄">🦄 Kỳ lân</option>
-              <option value="🦊">🦊 Cáo</option>
-              <option value="🐼">🐼 Gấu trúc</option>
-              <option value="🦁">🦁 Sư tử</option>
-              <option value="🐰">🐰 Thỏ</option>
-              <option value="🦉">🦉 Cú mèo</option>
-              <option value="🐯">🐯 Hổ</option>
-            </select>
-          </div>
+          <input type="hidden" id="new-student-avatar" value="🦖" />
+          <div id="new-student-avatar-grid" class="grid grid-cols-8 sm:grid-cols-10 gap-1.5 p-2.5 rounded-2xl bg-slate-50 border-2 border-slate-200 max-h-40 overflow-y-auto"></div>
         </div>
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="closeModal('add-student-modal')" class="pop-btn pop-btn-white px-4 py-2 rounded-xl text-xs font-black">Hủy</button>
@@ -1498,6 +1502,97 @@
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="closeModal('student-change-password-modal')" class="pop-btn pop-btn-white px-4 py-2 rounded-xl text-xs font-black">Hủy</button>
           <button type="submit" class="pop-btn pop-btn-green px-5 py-2 rounded-xl text-xs font-black">💾 Lưu Mật Khẩu Mới</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 11: CHỈNH SỬA THÔNG TIN GIÁO VIÊN
+       ======================================================================== -->
+  <div id="edit-teacher-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="relative bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 border-2 border-slate-800 shadow-[0_12px_0_#1e293b] animate-pop">
+      <button type="button" onclick="closeModal('edit-teacher-modal')"
+        class="absolute top-5 right-5 w-9 h-9 rounded-full border-2 border-slate-800 bg-slate-100 hover:bg-rose-100 hover:text-rose-700 text-slate-900 font-black flex items-center justify-center transition">✕</button>
+      <div class="mb-4 pr-10">
+        <span class="text-[11px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-900 border border-indigo-300 px-2.5 py-0.5 rounded-full">
+          👩‍🏫 Hồ Sơ Giáo Viên
+        </span>
+        <h3 class="text-xl font-black text-slate-900 mt-1.5">Chỉnh Sửa Thông Tin Giáo Viên</h3>
+      </div>
+      <form onsubmit="handleSaveTeacherProfile(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-black text-slate-700 mb-1">Họ và tên Giáo viên *</label>
+          <input id="edit-teacher-name" type="text" required placeholder="VD: Cô Nguyễn Minh Anh"
+            class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 text-sm font-black outline-none focus:border-slate-900" />
+        </div>
+        <div>
+          <label class="block text-xs font-black text-slate-700 mb-1">Trường học / Đơn vị</label>
+          <input id="edit-teacher-school" type="text" placeholder="VD: THPT Chu Văn An"
+            class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 text-sm font-bold outline-none focus:border-slate-900" />
+        </div>
+        <div>
+          <label class="block text-xs font-black text-slate-700 mb-1">Môn phụ trách / Danh xưng</label>
+          <input id="edit-teacher-subject" type="text" placeholder="VD: Giáo viên Toán - Tin"
+            class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 text-sm font-bold outline-none focus:border-slate-900" />
+        </div>
+        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeModal('edit-teacher-modal')" class="pop-btn pop-btn-white px-4 py-2 rounded-xl text-xs font-black">Hủy</button>
+          <button type="submit" class="pop-btn pop-btn-yellow px-5 py-2 rounded-xl text-xs font-black">💾 Lưu Thông Tin</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 12: CHỈNH SỬA THÔNG TIN HỌC SINH
+       ======================================================================== -->
+  <div id="edit-student-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="relative bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 border-2 border-slate-800 shadow-[0_12px_0_#1e293b] max-h-[92vh] overflow-y-auto animate-pop">
+      <button type="button" onclick="closeModal('edit-student-modal')"
+        class="absolute top-5 right-5 w-9 h-9 rounded-full border-2 border-slate-800 bg-slate-100 hover:bg-rose-100 hover:text-rose-700 text-slate-900 font-black flex items-center justify-center transition">✕</button>
+      <div class="mb-4 pr-10">
+        <span class="text-[11px] font-black uppercase tracking-wider bg-amber-200 text-amber-950 border border-amber-400 px-2.5 py-0.5 rounded-full">
+          🎒 Hồ Sơ Học Sinh
+        </span>
+        <h3 class="text-xl font-black text-slate-900 mt-1.5">Chỉnh Sửa Thông Tin Học Sinh</h3>
+      </div>
+      <form onsubmit="handleSaveEditedStudent(event)" class="space-y-3.5">
+        <input type="hidden" id="edit-student-id" value="" />
+        <div>
+          <label class="block text-xs font-black text-slate-700 mb-1">Họ và tên học sinh *</label>
+          <input id="edit-student-name" type="text" required placeholder="Nhập họ và tên..."
+            class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 text-sm font-black outline-none focus:border-slate-900" />
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-black text-slate-700 mb-1">Mã HS / Tài khoản *</label>
+            <input id="edit-student-code" type="text" required
+              class="w-full px-3 py-2 rounded-xl border-2 border-slate-300 text-sm font-black uppercase outline-none focus:border-slate-900" />
+          </div>
+          <div>
+            <label class="block text-xs font-black text-slate-700 mb-1">Nhóm / Tổ</label>
+            <select id="edit-student-group"
+              class="w-full px-3 py-2 rounded-xl border-2 border-slate-300 text-sm font-black outline-none focus:border-slate-900 bg-white">
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-black text-slate-700 mb-1">Điểm tích lũy</label>
+            <input id="edit-student-points" type="number" step="1" required
+              class="w-full px-3 py-2 rounded-xl border-2 border-slate-300 text-sm font-black text-emerald-700 outline-none focus:border-slate-900 bg-emerald-50/40" />
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-xs font-black text-slate-700">Đổi Avatar đại diện (40+ biểu tượng):</label>
+            <span id="edit-student-selected-avatar-preview" class="text-2xl bg-amber-100 px-2.5 py-0.5 rounded-xl border border-slate-400">🦖</span>
+          </div>
+          <input type="hidden" id="edit-student-avatar" value="🦖" />
+          <div id="edit-student-avatar-grid" class="grid grid-cols-8 sm:grid-cols-10 gap-1.5 p-2.5 rounded-2xl bg-slate-50 border-2 border-slate-200 max-h-40 overflow-y-auto"></div>
+        </div>
+        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeModal('edit-student-modal')" class="pop-btn pop-btn-white px-4 py-2 rounded-xl text-xs font-black">Hủy</button>
+          <button type="submit" class="pop-btn pop-btn-green px-5 py-2 rounded-xl text-xs font-black">💾 Lưu Thay Đổi</button>
         </div>
       </form>
     </div>

@@ -25,6 +25,19 @@ const AVAILABLE_CARD_FRAMES = [
   "24.jpg"
 ];
 
+const STUDENT_AVATAR_POOL = [
+  "🦖", "🦄", "🦊", "🐼", "🦁", "🐰", "🦉", "🐯", "🐲", "🦋",
+  "🦅", "🐱", "🐬", "🐨", "🐶", "🐧", "🦒", "🦔", "🐝", "🐙",
+  "🐢", "🦩", "🦚", "🦭", "🦘", "🐹", "🦦", "🐿️", "🐳", "🦌",
+  "🚀", "🌟", "🎨", "⚽", "🎸", "👑", "🧙‍♂️", "🦸‍♀️", "🤖", "🌈"
+];
+
+const CARD_ICON_POOL = [
+  "⚡", "🤝", "🎯", "⭐", "📈", "🎁", "✨", "🎨", "🎧", "💌",
+  "🏆", "📚", "🧹", "📝", "💡", "🎤", "💬", "🧘", "🛡️", "👑",
+  "🍫", "🏖️", "🎭", "🌈", "🔥", "🚀", "💎", "🎲", "🔔", "⏳"
+];
+
 const CARD_CATEGORIES = {
   power: [
     "Nhóm Trợ giúp học tập",
@@ -47,7 +60,8 @@ const DEFAULT_DATA = {
     username: "giaovien",
     password: "123",
     name: "Cô Nguyễn Minh Anh",
-    school: "THPT Chu Văn An"
+    school: "THPT Chu Văn An",
+    subject: "Toán - Tin"
   },
 
   isPointsHidden: false,

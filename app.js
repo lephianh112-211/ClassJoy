@@ -960,7 +960,9 @@ function enterDemoMode() {
   sanitizeCardFrames(appState);
   saveState();
   currentClassId = appState.classes[0]?.id || "class-10a1";
-  updateTeacherInfoUI("Cô Nguyễn Minh Anh (Demo)", "demo@classjoy.vn", null);
+  const tAcc = appState.teacherAccount || DEFAULT_DATA.teacherAccount;
+  const subText = [tAcc.school, tAcc.subject].filter(Boolean).join(" • ") || "Demo ClassJoy";
+  updateTeacherInfoUI(tAcc.name || "Cô Nguyễn Minh Anh", subText, null);
   isSidebarCollapsed = true;
   updateSidebarExpansionUI();
   enterMainApp("teacher");
@@ -982,6 +984,59 @@ function updateTeacherInfoUI(name, email, photoUrl) {
       cloudBadge.textContent = "☁️ Firebase Đã Kết Nối";
     }
   }
+}
+
+function refreshTeacherHeaderFromState() {
+  if (currentAppRole === "student") return;
+  if (!appState.teacherAccount) {
+    appState.teacherAccount = JSON.parse(JSON.stringify(DEFAULT_DATA.teacherAccount));
+  }
+  const tAcc = appState.teacherAccount;
+  const displayName = tAcc.name || currentFirebaseUser?.displayName || "Giáo viên";
+  const subParts = [tAcc.school, tAcc.subject].filter(Boolean);
+  const subInfo = subParts.length > 0 ? subParts.join(" • ") : (currentFirebaseUser?.email || "ClassJoy");
+  updateTeacherInfoUI(displayName, subInfo, currentFirebaseUser?.photoURL || null);
+}
+
+function openEditTeacherModal() {
+  if (!appState.teacherAccount) {
+    appState.teacherAccount = JSON.parse(JSON.stringify(DEFAULT_DATA.teacherAccount));
+  }
+  const tAcc = appState.teacherAccount;
+  const nameEl = document.getElementById("edit-teacher-name");
+  const schoolEl = document.getElementById("edit-teacher-school");
+  const subjectEl = document.getElementById("edit-teacher-subject");
+  if (nameEl) nameEl.value = tAcc.name || currentFirebaseUser?.displayName || "Giáo viên";
+  if (schoolEl) schoolEl.value = tAcc.school || "";
+  if (subjectEl) subjectEl.value = tAcc.subject || "";
+  document.getElementById("edit-teacher-modal")?.classList.remove("hidden");
+}
+
+async function handleSaveTeacherProfile(e) {
+  e.preventDefault();
+  const name = document.getElementById("edit-teacher-name")?.value.trim() || "Giáo viên";
+  const school = document.getElementById("edit-teacher-school")?.value.trim() || "";
+  const subject = document.getElementById("edit-teacher-subject")?.value.trim() || "";
+
+  if (!appState.teacherAccount) {
+    appState.teacherAccount = {};
+  }
+  appState.teacherAccount.name = name;
+  appState.teacherAccount.school = school;
+  appState.teacherAccount.subject = subject;
+
+  if (currentFirebaseUser && currentFirebaseUser.updateProfile) {
+    try {
+      await currentFirebaseUser.updateProfile({ displayName: name });
+    } catch (err) {
+      console.warn("Không thể cập nhật Firebase displayName:", err);
+    }
+  }
+
+  saveState();
+  refreshTeacherHeaderFromState();
+  closeModal("edit-teacher-modal");
+  showToast("👩‍🏫 Đã cập nhật thông tin hồ sơ giáo viên!", "emerald");
 }
 
 async function loadTeacherDataFromFirestore(user) {
@@ -1021,6 +1076,7 @@ async function loadTeacherDataFromFirestore(user) {
       });
     }
     currentClassId = appState.classes[0]?.id;
+    refreshTeacherHeaderFromState();
     saveState();
     renderAll();
   } catch (err) {
@@ -1185,9 +1241,11 @@ function enterMainApp(mode, studentCode = "", studentPassword = "123456") {
 
   const roleBadge = document.getElementById("role-badge");
   const navTabs = document.getElementById("teacher-nav-tabs");
+  const editTeacherBtn = document.getElementById("edit-teacher-profile-btn");
   if (mode === "student") {
     currentAppRole = "student";
     if (navTabs) navTabs.classList.add("hidden");
+    if (editTeacherBtn) editTeacherBtn.classList.add("hidden");
     roleBadge.textContent = "🎒 Học sinh (Chế độ xem thông tin)";
     roleBadge.className =
       "text-[11px] font-black px-3 py-1 rounded-full bg-amber-200 text-amber-950 border border-slate-900";
@@ -1202,9 +1260,11 @@ function enterMainApp(mode, studentCode = "", studentPassword = "123456") {
   } else {
     currentAppRole = "teacher";
     if (navTabs) navTabs.classList.remove("hidden");
+    if (editTeacherBtn) editTeacherBtn.classList.remove("hidden");
     roleBadge.textContent = "Giáo viên";
     roleBadge.className =
       "text-[11px] font-black px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300";
+    refreshTeacherHeaderFromState();
     isSidebarCollapsed = true;
     updateSidebarExpansionUI();
     switchMainTab("classroom");
@@ -2244,19 +2304,15 @@ function renderRankingTab() {
             </div>
           </div>
 
-          <!-- Các cột chỉ số Tuần / Tháng / Tổng -->
+          <!-- Các cột chỉ số Tuần / Tháng (Đã bỏ Tổng tích lũy để bảng trực diện, gọn gàng) -->
           <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
-            <div class="px-3 py-1 rounded-xl bg-white border border-slate-200 text-center">
+            <div class="px-3.5 py-1 rounded-xl bg-white border border-slate-200 text-center min-w-[70px]">
               <div class="text-[10px] font-bold text-slate-400">Tuần này</div>
               <div class="text-xs font-black ${st.weekGain < 0 ? "text-rose-600" : "text-emerald-600"}">${formatSignedScore(st.weekGain)}</div>
             </div>
-            <div class="px-3 py-1 rounded-xl bg-white border border-slate-200 text-center">
+            <div class="px-3.5 py-1 rounded-xl bg-white border border-slate-200 text-center min-w-[70px]">
               <div class="text-[10px] font-bold text-slate-400">Tháng này</div>
               <div class="text-xs font-black ${st.monthGain < 0 ? "text-rose-600" : "text-indigo-600"}">${formatSignedScore(st.monthGain)}</div>
-            </div>
-            <div class="px-3 py-1 rounded-xl bg-amber-100 border border-amber-300 text-center min-w-[68px]">
-              <div class="text-[10px] font-black text-amber-900">Tổng tích lũy</div>
-              <div class="text-xs font-black text-slate-900">${st.points}đ</div>
             </div>
           </div>
 
@@ -2394,40 +2450,60 @@ function renderStudentDetailModalContent(studentId) {
 
   const container = document.getElementById("student-modal-content");
   container.innerHTML = `
-    <!-- Header hồ sơ học sinh (Kèm quản lý Tài khoản & Mật khẩu cho Giáo viên) -->
-    <div class="flex flex-wrap items-center justify-between gap-4 pb-5 border-b-2 border-slate-200">
+    <!-- Nút đóng cố định ở góc trên bên phải của bảng thông tin học sinh -->
+    <button type="button" onclick="closeModal('student-detail-modal')"
+      class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full border-2 border-slate-800 bg-slate-100 hover:bg-rose-100 hover:text-rose-700 hover:border-rose-400 text-slate-800 font-black text-lg flex items-center justify-center shadow-sm transition z-20"
+      title="Đóng bảng thông tin học sinh">
+      ✕
+    </button>
+
+    <!-- Header hồ sơ học sinh (Kèm quản lý Thông tin, Tài khoản & Mật khẩu cho Giáo viên) -->
+    <div class="flex flex-wrap items-center justify-between gap-4 pb-5 pr-12 border-b-2 border-slate-200">
       <div class="flex items-center gap-4">
-        <div class="avatar-sticker w-16 h-16 rounded-3xl ${student.avatarBg} border-2 border-slate-900 flex items-center justify-center text-4xl shadow-[0_3px_0_#1e293b]">
+        <div onclick="openEditStudentModal('${student.id}')" class="avatar-sticker w-16 h-16 rounded-3xl ${student.avatarBg} border-2 border-slate-800 flex items-center justify-center text-4xl shadow-[0_3px_0_#1e293b] cursor-pointer"
+          title="Bấm để đổi Avatar hoặc sửa thông tin học sinh">
           ${student.avatar}
         </div>
         <div>
           <div class="flex flex-wrap items-center gap-2">
-            <span class="px-2.5 py-0.5 rounded-lg bg-amber-300 text-slate-900 font-black text-xs border border-slate-900">Mã HS: ${student.code}</span>
+            <span class="px-2.5 py-0.5 rounded-lg bg-amber-300 text-slate-900 font-black text-xs border border-slate-800">Mã HS: ${student.code}</span>
             <span class="px-2.5 py-0.5 rounded-lg bg-indigo-100 text-indigo-900 font-black text-xs border border-indigo-300">👤 TK: ${studentUsername}</span>
             <span class="text-xs font-bold text-slate-500">${classObj.name} • ${student.group}</span>
           </div>
-          <h3 class="text-2xl font-black text-slate-900 mt-1">${student.name}</h3>
-          <div class="flex flex-wrap items-center gap-2 mt-1">
+          <div class="flex flex-wrap items-center gap-2.5 mt-1">
+            <h3 class="text-2xl font-black text-slate-900">${student.name}</h3>
+            <button type="button" onclick="openEditStudentModal('${student.id}')"
+              class="px-2.5 py-1 rounded-xl bg-amber-100 hover:bg-amber-200 border border-slate-800 text-xs font-black text-slate-900 shadow-[0_1px_0_#1e293b] transition flex items-center gap-1"
+              title="Chỉnh sửa tên, mã HS, nhóm, điểm số hoặc Avatar">
+              <span>✏️ Sửa thông tin</span>
+            </button>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 mt-1.5">
             <span class="text-xs font-bold ${isEffectiveHidden ? "text-slate-400" : "text-emerald-700"}">
               ${isEffectiveHidden ? "🙈 Điểm đang ẩn trên màn hình chiếu" : `Tăng tuần: +${growth.weekGain}đ • Tăng tháng: +${growth.monthGain}đ`}
             </span>
             <span class="text-slate-300">|</span>
             <button type="button" onclick="teacherChangeStudentPassword('${student.id}')"
-              class="px-2 py-0.5 rounded-lg bg-white hover:bg-amber-100 border border-slate-900 text-[11px] font-black text-slate-800 shadow-[0_1px_0_#1e293b]"
+              class="px-2 py-0.5 rounded-lg bg-white hover:bg-amber-100 border border-slate-400 hover:border-slate-800 text-[11px] font-black text-slate-700 transition"
               title="Giáo viên đặt mật khẩu mới cho học sinh này">
-              ✏️ Đổi MK
+              🔑 Đổi MK
             </button>
             <button type="button" onclick="teacherResetStudentPassword('${student.id}')"
-              class="px-2 py-0.5 rounded-lg bg-white hover:bg-emerald-100 border border-slate-900 text-[11px] font-black text-emerald-800 shadow-[0_1px_0_#1e293b]"
+              class="px-2 py-0.5 rounded-lg bg-white hover:bg-emerald-100 border border-slate-400 hover:border-slate-800 text-[11px] font-black text-emerald-800 transition"
               title="Khôi phục mật khẩu của học sinh về mặc định 123456">
               🔄 Reset 123456
+            </button>
+            <button type="button" onclick="deleteStudent('${student.id}')"
+              class="px-2 py-0.5 rounded-lg bg-white hover:bg-rose-100 border border-rose-300 text-[11px] font-black text-rose-600 transition"
+              title="Xóa học sinh này khỏi lớp">
+              🗑️ Xóa HS
             </button>
           </div>
         </div>
       </div>
 
       <div class="flex items-center gap-3">
-        <div class="text-right ${isEffectiveHidden ? "bg-slate-100 border-2 border-dashed border-slate-400" : "bg-amber-100 border-2 border-slate-900 shadow-[0_3px_0_#1e293b]"} px-4 py-2 rounded-2xl flex items-center gap-3">
+        <div class="text-right ${isEffectiveHidden ? "bg-slate-100 border-2 border-dashed border-slate-400" : "bg-amber-100 border-2 border-slate-800 shadow-[0_3px_0_#1e293b]"} px-4 py-2 rounded-2xl flex items-center gap-3">
           <div>
             <div class="text-[10px] font-black uppercase ${isEffectiveHidden ? "text-slate-500" : "text-amber-900"}">Điểm của ${student.name.split(' ').pop()}</div>
             <div class="text-2xl font-black ${isEffectiveHidden ? "text-slate-500" : "text-slate-900"}">${isEffectiveHidden ? "⭐ Đang ẩn" : `${student.points} điểm`}</div>
@@ -2442,13 +2518,6 @@ function renderStudentDetailModalContent(studentId) {
               : ""
           }
         </div>
-        <button onclick="deleteStudent('${student.id}')"
-          class="pop-btn pop-btn-coral px-3 py-2 rounded-2xl text-xs font-black flex items-center gap-1.5"
-          title="Xóa học sinh này khỏi lớp">
-          <span>🗑️ Xóa HS</span>
-        </button>
-        <button onclick="closeModal('student-detail-modal')"
-          class="w-10 h-10 rounded-2xl border-2 border-slate-900 bg-slate-100 hover:bg-slate-200 text-slate-900 font-black text-lg">✕</button>
       </div>
     </div>
 
@@ -3764,6 +3833,35 @@ function selectCardFrame(frameUrl) {
   updateCardEditorPreview();
 }
 
+function populateCardIconPicker() {
+  const container = document.getElementById("card-icon-picker");
+  if (!container) return;
+  const currentIcon = (document.getElementById("edit-card-icon")?.value || "⚡").trim();
+  const icons = typeof CARD_ICON_POOL !== "undefined" && CARD_ICON_POOL.length > 0
+    ? CARD_ICON_POOL
+    : ["⚡", "🤝", "🎯", "⭐", "📈", "🎁", "✨", "🎨", "🎧", "💌", "🏆", "📚", "🧹", "📝", "💡", "🎤", "💬", "🧘", "🛡️", "👑", "🍫", "🏖️", "🎭", "🌈"];
+
+  container.innerHTML = icons
+    .map((ic) => {
+      const isSelected = ic === currentIcon;
+      return `
+        <button type="button" onclick="selectCardIcon('${ic}')"
+          class="w-8 h-8 rounded-lg border ${isSelected ? 'bg-amber-300 border-slate-900 scale-110 shadow-xs' : 'bg-white border-slate-200 hover:border-slate-600 hover:bg-amber-50'} flex items-center justify-center text-base transition cursor-pointer"
+          title="Chọn biểu tượng ${ic}">
+          ${ic}
+        </button>
+      `;
+    })
+    .join("");
+}
+
+function selectCardIcon(iconChar) {
+  const input = document.getElementById("edit-card-icon");
+  if (input) input.value = iconChar;
+  populateCardIconPicker();
+  updateCardEditorPreview();
+}
+
 function updateCardEditorPreview() {
   const previewContainer = document.getElementById("card-editor-live-preview");
   if (!previewContainer) return;
@@ -3814,6 +3912,7 @@ function openCreateCardModal(type) {
   document.getElementById("edit-card-frame").value = randomFrame;
 
   populateCardFramePicker();
+  populateCardIconPicker();
   updateCardEditorPreview();
   document.getElementById("card-editor-modal").classList.remove("hidden");
 }
@@ -3835,6 +3934,7 @@ function openEditCardModal(cardId, type) {
   document.getElementById("edit-card-frame").value = resolveFrameUrl(rawFrame);
 
   populateCardFramePicker();
+  populateCardIconPicker();
   updateCardEditorPreview();
   document.getElementById("card-editor-modal").classList.remove("hidden");
 }
@@ -4322,6 +4422,42 @@ function teacherResetStudentPassword(studentId) {
 // ----------------------------------------------------------------------------
 // 15. THÊM HỌC SINH MỚI & THÊM LỚP HỌC MỚI
 // ----------------------------------------------------------------------------
+function getStudentAvatarList() {
+  if (typeof STUDENT_AVATAR_POOL !== "undefined" && STUDENT_AVATAR_POOL.length > 0) {
+    return STUDENT_AVATAR_POOL;
+  }
+  return [
+    "🦖", "🦄", "🦊", "🐼", "🦁", "🐰", "🦉", "🐯", "🐲", "🦋",
+    "🦅", "🐱", "🐬", "🐨", "🐶", "🐧", "🦒", "🦔", "🐝", "🐙",
+    "🐢", "🦩", "🦚", "🦭", "🦘", "🐹", "🦦", "🐿️", "🐳", "🦌",
+    "🚀", "🌟", "🎨", "⚽", "🎸", "👑", "🧙‍♂️", "🦸‍♀️", "🤖", "🌈"
+  ];
+}
+
+function renderAvatarPickerGrid(gridId, inputId, previewId, selectedAvatar) {
+  const grid = document.getElementById(gridId);
+  const input = document.getElementById(inputId);
+  const preview = document.getElementById(previewId);
+  const avatars = getStudentAvatarList();
+  const current = selectedAvatar || avatars[0];
+  if (input) input.value = current;
+  if (preview) preview.textContent = current;
+  if (!grid) return;
+
+  grid.innerHTML = avatars
+    .map((av) => {
+      const isSelected = av === current;
+      return `
+        <button type="button" onclick="renderAvatarPickerGrid('${gridId}', '${inputId}', '${previewId}', '${av}')"
+          class="w-9 h-9 rounded-xl border ${isSelected ? 'bg-amber-300 border-slate-900 scale-105 shadow-xs' : 'bg-white border-slate-200 hover:border-slate-500 hover:bg-amber-50'} flex items-center justify-center text-xl transition cursor-pointer"
+          title="Chọn Avatar ${av}">
+          ${av}
+        </button>
+      `;
+    })
+    .join("");
+}
+
 function updateNewStudentAccountPreview() {
   const codeVal = (document.getElementById("new-student-code")?.value || "").trim();
   const previewEl = document.getElementById("new-student-username-preview");
@@ -4347,6 +4483,10 @@ function openAddStudentModal() {
       .join("");
   }
 
+  const avatars = getStudentAvatarList();
+  const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
+  renderAvatarPickerGrid("new-student-avatar-grid", "new-student-avatar", "new-student-selected-avatar-preview", randomAvatar);
+
   document.getElementById("add-student-modal").classList.remove("hidden");
 }
 
@@ -4360,9 +4500,11 @@ function handleCreateStudent(e) {
   const password = (document.getElementById("new-student-password")?.value || "123456").trim() || "123456";
   const username = code.toLowerCase();
   const group = document.getElementById("new-student-group").value;
-  const avatar = document.getElementById("new-student-avatar").value;
+  const avatar = document.getElementById("new-student-avatar").value || "🦖";
+  const bgPool = ["bg-amber-100", "bg-emerald-100", "bg-sky-100", "bg-rose-100", "bg-violet-100", "bg-fuchsia-100", "bg-orange-100", "bg-teal-100"];
+  const avatarBg = bgPool[cls.students.length % bgPool.length];
 
-  cls.students.push({
+  const newSt = {
     id: "st-" + Date.now(),
     code,
     username,
@@ -4370,17 +4512,93 @@ function handleCreateStudent(e) {
     name,
     group,
     avatar,
-    avatarBg: "bg-amber-100",
+    avatarBg,
     points: 10,
     speechCount: 0,
     ownedCards: [],
     history: [{ time: nowTimeString(), daysAgo: 0, text: "Khởi tạo học sinh mới (+10đ)", delta: 10 }]
-  });
+  };
+  cls.students.push(newSt);
+  saveStudentPasswordToStore(newSt, password);
 
   saveState();
   renderAll();
   closeModal("add-student-modal");
-  showToast(`🎉 Đã thêm ${name} (TK: ${username} / MK: ${password})!`, "emerald");
+  showToast(`🎉 Đã thêm ${name} (TK: ${username})!`, "emerald");
+}
+
+function openEditStudentModal(studentId) {
+  const found = findStudentById(studentId);
+  if (!found) return;
+  const { student, classObj } = found;
+
+  document.getElementById("edit-student-id").value = student.id;
+  document.getElementById("edit-student-name").value = student.name || "";
+  document.getElementById("edit-student-code").value = student.code || "";
+  document.getElementById("edit-student-points").value = Number(student.points || 0);
+
+  const groupSelect = document.getElementById("edit-student-group");
+  if (groupSelect) {
+    const allGroups = [...new Set([...(classObj.groupsList || ["Nhóm 1", "Nhóm 2", "Nhóm 3", "Nhóm 4"]), student.group].filter(Boolean))];
+    groupSelect.innerHTML = allGroups
+      .map((g) => `<option value="${g}" ${g === student.group ? "selected" : ""}>${g}</option>`)
+      .join("");
+  }
+
+  renderAvatarPickerGrid("edit-student-avatar-grid", "edit-student-avatar", "edit-student-selected-avatar-preview", student.avatar || "🦖");
+  document.getElementById("edit-student-modal")?.classList.remove("hidden");
+}
+
+function handleSaveEditedStudent(e) {
+  e.preventDefault();
+  const studentId = document.getElementById("edit-student-id")?.value;
+  const found = findStudentById(studentId);
+  if (!found) return;
+  const { student, classObj } = found;
+
+  const newName = document.getElementById("edit-student-name")?.value.trim();
+  const newCode = document.getElementById("edit-student-code")?.value.trim().toUpperCase();
+  const newGroup = document.getElementById("edit-student-group")?.value;
+  const newPoints = parseInt(document.getElementById("edit-student-points")?.value, 10);
+  const newAvatar = document.getElementById("edit-student-avatar")?.value || student.avatar;
+
+  if (newName) student.name = newName;
+  if (newCode) {
+    student.code = newCode;
+    student.username = newCode.toLowerCase();
+  }
+  if (newGroup) student.group = newGroup;
+  if (!isNaN(newPoints) && newPoints !== student.points) {
+    const diff = newPoints - student.points;
+    student.points = Math.max(0, newPoints);
+    student.history.unshift({
+      time: nowTimeString(),
+      daysAgo: 0,
+      text: `${diff >= 0 ? `+${diff}đ` : `${diff}đ`}: Giáo viên cập nhật điểm trực tiếp`,
+      delta: diff
+    });
+  }
+  student.avatar = newAvatar;
+
+  // Đồng bộ tên trong speechQueue nếu có
+  if (Array.isArray(appState.speechQueue)) {
+    appState.speechQueue.forEach((q) => {
+      if (q.studentId === student.id) {
+        q.studentName = student.name;
+        q.studentAvatar = student.avatar;
+      }
+    });
+  }
+
+  saveStudentPasswordToStore(student, student.password || "123456");
+  saveState();
+  syncSingleClassToCloud(classObj);
+  renderAll();
+  if (activeStudentModalId === student.id) {
+    renderStudentDetailModalContent(student.id);
+  }
+  closeModal("edit-student-modal");
+  showToast(`✅ Đã lưu thông tin mới của ${student.name}!`, "emerald");
 }
 
 function openAddClassModal() {
@@ -4679,7 +4897,7 @@ function parseStudentImportText(text) {
     }
   }
 
-  const avatarPool = ["🦖", "🦄", "🦊", "🐼", "🦁", "🐰", "🦉", "🐯", "🐲", "🦋", "🦅", "🐱", "🐬", "🐨", "🐶"];
+  const avatarPool = getStudentAvatarList();
   const bgPool = [
     "bg-amber-100", "bg-emerald-100", "bg-sky-100", "bg-rose-100",
     "bg-violet-100", "bg-fuchsia-100", "bg-orange-100", "bg-teal-100"

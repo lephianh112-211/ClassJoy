@@ -19,12 +19,12 @@ body {
 }
 
 /* --------------------------------------------------------------------------
-   1. NÚT BẤM 2.5D CHUNKY (TACTILE FEEDBACK)
+   1. NÚT BẤM 2.5D CHUNKY (TACTILE FEEDBACK - MỀM MẠI, DỊU MẮT)
    -------------------------------------------------------------------------- */
 .pop-btn {
   position: relative;
-  transition: all 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
-  border: 2px solid #1e293b;
+  transition: all 0.14s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border: 1.5px solid #334155;
   font-weight: 800;
   display: inline-flex;
   align-items: center;
@@ -36,65 +36,66 @@ body {
 .pop-btn-yellow {
   background-color: #fbbf24;
   color: #1e293b;
-  box-shadow: 0 4px 0 #d97706;
+  box-shadow: 0 3px 0 #d97706;
 }
 .pop-btn-yellow:hover { background-color: #f59e0b; }
-.pop-btn-yellow:active { transform: translateY(3px); box-shadow: 0 1px 0 #d97706; }
+.pop-btn-yellow:active { transform: translateY(2px); box-shadow: 0 1px 0 #d97706; }
 
 .pop-btn-blue {
   background-color: #38bdf8;
   color: #0c4a6e;
-  box-shadow: 0 4px 0 #0284c7;
+  box-shadow: 0 3px 0 #0284c7;
 }
 .pop-btn-blue:hover { background-color: #0ea5e9; color: #ffffff; }
-.pop-btn-blue:active { transform: translateY(3px); box-shadow: 0 1px 0 #0284c7; }
+.pop-btn-blue:active { transform: translateY(2px); box-shadow: 0 1px 0 #0284c7; }
 
 .pop-btn-green {
   background-color: #34d399;
   color: #064e3b;
-  box-shadow: 0 4px 0 #059669;
+  box-shadow: 0 3px 0 #059669;
 }
 .pop-btn-green:hover { background-color: #10b981; color: #ffffff; }
-.pop-btn-green:active { transform: translateY(3px); box-shadow: 0 1px 0 #059669; }
+.pop-btn-green:active { transform: translateY(2px); box-shadow: 0 1px 0 #059669; }
 
 .pop-btn-coral {
-  background-color: #fb7185;
+  background-color: #fda4af;
   color: #881337;
-  box-shadow: 0 4px 0 #e11d48;
+  box-shadow: 0 3px 0 #e11d48;
 }
 .pop-btn-coral:hover { background-color: #f43f5e; color: #ffffff; }
-.pop-btn-coral:active { transform: translateY(3px); box-shadow: 0 1px 0 #e11d48; }
+.pop-btn-coral:active { transform: translateY(2px); box-shadow: 0 1px 0 #e11d48; }
 
 .pop-btn-violet {
   background-color: #a78bfa;
   color: #2e1065;
-  box-shadow: 0 4px 0 #7c3aed;
+  box-shadow: 0 3px 0 #7c3aed;
 }
 .pop-btn-violet:hover { background-color: #8b5cf6; color: #ffffff; }
-.pop-btn-violet:active { transform: translateY(3px); box-shadow: 0 1px 0 #7c3aed; }
+.pop-btn-violet:active { transform: translateY(2px); box-shadow: 0 1px 0 #7c3aed; }
 
 .pop-btn-white {
   background-color: #ffffff;
   color: #1e293b;
-  box-shadow: 0 4px 0 #cbd5e1;
+  border-color: #cbd5e1;
+  box-shadow: 0 3px 0 #cbd5e1;
 }
-.pop-btn-white:hover { background-color: #f8fafc; }
-.pop-btn-white:active { transform: translateY(3px); box-shadow: 0 1px 0 #cbd5e1; }
+.pop-btn-white:hover { background-color: #f8fafc; border-color: #64748b; }
+.pop-btn-white:active { transform: translateY(2px); box-shadow: 0 1px 0 #cbd5e1; }
 
 .pop-btn-dark {
   background-color: #1e293b;
   color: #ffffff;
-  box-shadow: 0 4px 0 #020617;
+  box-shadow: 0 3px 0 #020617;
 }
 .pop-btn-dark:hover { background-color: #334155; }
-.pop-btn-dark:active { transform: translateY(3px); box-shadow: 0 1px 0 #020617; }
+.pop-btn-dark:active { transform: translateY(2px); box-shadow: 0 1px 0 #020617; }
 
 /* --------------------------------------------------------------------------
    2. THẺ HỌC SINH TINH GỌN (CLEAN CLASSDOJO POP CARDS)
    -------------------------------------------------------------------------- */
 .student-card {
-  border: 2.5px solid #1e293b;
-  box-shadow: 0 5px 0 #1e293b;
+  border: 2px solid #cbd5e1;
+  box-shadow: 0 4px 0 #cbd5e1, 0 4px 12px rgba(15, 23, 42, 0.04);
   border-radius: 1.5rem;
   transition: all 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
   background-color: #ffffff;
@@ -102,20 +103,21 @@ body {
 }
 
 .student-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 0 #1e293b;
+  transform: translateY(-3px);
+  border-color: #334155;
+  box-shadow: 0 6px 0 #334155, 0 8px 16px rgba(15, 23, 42, 0.08);
 }
 
 .point-badge-pop {
-  border: 2px solid #1e293b;
-  box-shadow: 0 2px 0 #1e293b;
+  border: 1.5px solid #334155;
+  box-shadow: 0 1.5px 0 #334155;
   font-weight: 900;
   transition: all 0.2s ease;
 }
 
 .avatar-sticker {
-  border: 2px solid #1e293b;
-  box-shadow: 0 2.5px 0 #1e293b;
+  border: 2px solid #334155;
+  box-shadow: 0 2px 0 #94a3b8;
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
