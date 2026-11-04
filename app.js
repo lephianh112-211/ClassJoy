@@ -203,7 +203,7 @@ function getCardCategories(type) {
   if (type === "power") {
     return ["Nhóm Trợ giúp học tập", "Nhóm Chiến lược", "Nhóm Tương tác"];
   }
-  return ["Nhóm Hỗ trợ giáo viên", "Nhóm Phát triển Bản thân", "Nhóm Kỹ năng"];
+  return ["Nhóm Hỗ trợ giáo viên", "Nhóm Phát triển Bản thân", "Nhóm Kỹ năng Xã hội"];
 }
 
 function normalizeCardCategory(rawCat, type, fallbackIdx = 0) {
@@ -304,16 +304,48 @@ function loadState(user = currentFirebaseUser) {
       if (!parsed.pointLineMilestones) {
         parsed.pointLineMilestones = DEFAULT_DATA.pointLineMilestones;
       }
-      // Đảm bảo tài khoản Demo hoặc tài khoản mới có đầy đủ bộ thẻ mẫu mặc định mới nhất (12 Power Cards & 8 Challenge Cards)
+      // Đảm bảo tài khoản Demo hoặc tài khoản mới có đầy đủ bộ thẻ mẫu mặc định mới nhất (13 Power Cards & 8 Challenge Cards)
       if (key === "CLASSJOY_DEMO_STATE") {
         parsed.powerCards = JSON.parse(JSON.stringify(DEFAULT_DATA.powerCards));
         parsed.penaltyCards = JSON.parse(JSON.stringify(DEFAULT_DATA.penaltyCards));
       } else {
-        if (!Array.isArray(parsed.powerCards) || parsed.powerCards.length < DEFAULT_DATA.powerCards.length) {
+        if (!Array.isArray(parsed.powerCards)) {
           parsed.powerCards = JSON.parse(JSON.stringify(DEFAULT_DATA.powerCards));
+        } else {
+          DEFAULT_DATA.powerCards.forEach((defCard) => {
+            const exIdx = parsed.powerCards.findIndex((c) => c.id === defCard.id || c.code === defCard.code);
+            if (exIdx >= 0) {
+              parsed.powerCards[exIdx] = {
+                ...parsed.powerCards[exIdx],
+                title: defCard.title,
+                description: defCard.description,
+                category: defCard.category,
+                icon: defCard.icon,
+                cardFrame: defCard.cardFrame
+              };
+            } else {
+              parsed.powerCards.push(JSON.parse(JSON.stringify(defCard)));
+            }
+          });
         }
-        if (!Array.isArray(parsed.penaltyCards) || parsed.penaltyCards.length < DEFAULT_DATA.penaltyCards.length) {
+        if (!Array.isArray(parsed.penaltyCards)) {
           parsed.penaltyCards = JSON.parse(JSON.stringify(DEFAULT_DATA.penaltyCards));
+        } else {
+          DEFAULT_DATA.penaltyCards.forEach((defCard) => {
+            const exIdx = parsed.penaltyCards.findIndex((c) => c.id === defCard.id || c.code === defCard.code);
+            if (exIdx >= 0) {
+              parsed.penaltyCards[exIdx] = {
+                ...parsed.penaltyCards[exIdx],
+                title: defCard.title,
+                description: defCard.description,
+                category: defCard.category,
+                icon: defCard.icon,
+                cardFrame: defCard.cardFrame
+              };
+            } else {
+              parsed.penaltyCards.push(JSON.parse(JSON.stringify(defCard)));
+            }
+          });
         }
       }
       sanitizeCardFrames(parsed);
