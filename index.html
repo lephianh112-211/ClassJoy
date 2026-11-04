@@ -757,8 +757,8 @@
        ======================================================================== -->
 
   <!-- MODAL PHÂN PHỐI PHẦN THƯỞNG / CHALLENGE CARD CHO CẢ NHÓM -->
-  <div id="group-reward-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 border-2 border-slate-900 shadow-[0_12px_0_#1e293b] animate-pop">
+  <div id="group-reward-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-5 sm:p-6 border-2 border-slate-900 shadow-[0_10px_0_#1e293b] max-h-[90vh] overflow-y-auto my-auto animate-pop">
       <div class="flex items-center justify-between mb-4">
         <div>
           <span class="text-xs font-black uppercase tracking-wider bg-emerald-300 text-slate-900 border border-slate-900 px-3 py-0.5 rounded-full">
@@ -841,7 +841,7 @@
   </div>
 
   <!-- MODAL CÀI ĐẶT MỐC ĐIỂM ĐỐI CHIẾU POINT LINE (CHO GIÁO VIÊN) -->
-  <div id="milestone-settings-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div id="milestone-settings-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
     <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 border-2 border-slate-900 shadow-[0_12px_0_#1e293b] max-h-[90vh] overflow-y-auto animate-pop">
       <div class="flex items-center justify-between mb-4">
         <div>
@@ -892,15 +892,15 @@
   </div>
 
   <!-- MODAL 1: CHI TIẾT HỌC SINH -->
-  <div id="student-detail-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div id="student-detail-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
     <div class="relative bg-white rounded-3xl max-w-4xl w-full max-h-[92vh] overflow-y-auto border-2 border-slate-800 shadow-[0_12px_0_#1e293b] animate-pop">
       <div id="student-modal-content" class="p-6 sm:p-8"></div>
     </div>
   </div>
 
   <!-- MODAL 2: RANDOM HỌC SINH (VÒNG QUAY MAY MẮN) -->
-  <div id="random-student-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 border-2 border-slate-900 shadow-[0_12px_0_#1e293b] text-center animate-pop">
+  <div id="random-student-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 border-2 border-slate-900 shadow-[0_10px_0_#1e293b] max-h-[90vh] overflow-y-auto my-auto text-center animate-pop">
       <div class="flex items-center justify-between mb-4">
         <span class="text-xs font-black uppercase tracking-wider bg-amber-300 text-slate-900 border border-slate-900 px-3.5 py-1 rounded-full shadow-[0_2px_0_#1e293b]">
           🎡 Vòng Quay Ngẫu Nhiên
@@ -1017,8 +1017,8 @@
   </div>
 
   <!-- MODAL 3: RANDOM THẺ POWER CARD / CHALLENGE CARD -->
-  <div id="random-card-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 border-2 border-slate-900 shadow-[0_12px_0_#1e293b] animate-pop">
+  <div id="random-card-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-5 sm:p-6 border-2 border-slate-900 shadow-[0_10px_0_#1e293b] max-h-[90vh] overflow-y-auto my-auto animate-pop">
       <div class="flex items-center justify-between mb-4">
         <span id="random-card-badge" class="text-xs font-black uppercase tracking-wider bg-amber-300 text-slate-900 border border-slate-900 px-3.5 py-1 rounded-full shadow-[0_2px_0_#1e293b]">
           🎁 Vòng Quay Bốc Thẻ
@@ -1037,54 +1037,52 @@
         </button>
       </div>
 
-      <!-- Chọn Nhóm Thẻ muốn bốc (Phân loại thẻ) -->
-      <div class="mb-3.5 bg-amber-50/70 p-3 rounded-2xl border-2 border-slate-300 space-y-2">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <span class="text-xs font-black uppercase tracking-wider text-slate-800">📂 Chọn nhóm thẻ muốn quay:</span>
-          <span id="random-card-pool-count" class="text-[11px] font-black text-indigo-700 bg-white px-2.5 py-0.5 rounded-lg border border-indigo-200">
-            Đang có 3 thẻ
-          </span>
-        </div>
-        <select id="random-card-category-select" onchange="handleRandomCardCategoryChange(this.value)"
-          class="w-full px-3.5 py-2 rounded-xl bg-white border-2 border-slate-900 font-black text-xs sm:text-sm text-slate-900 outline-none cursor-pointer">
-          <option value="ALL">🌟 Tất cả các nhóm thẻ</option>
-        </select>
-      </div>
-
-      <!-- Chọn đối tượng nhận thẻ: Cá nhân Học sinh HOẶC Cả Nhóm / Tổ -->
-      <div class="mb-4 bg-slate-50 p-3 rounded-2xl border-2 border-slate-300 space-y-2.5">
-        <div class="flex items-center justify-between gap-2">
-          <span class="text-xs font-black uppercase tracking-wider text-slate-700">🎁 Đối tượng nhận thẻ khi quay:</span>
-          <div class="flex gap-1.5 bg-slate-200/80 p-1 rounded-xl">
-            <button type="button" id="random-card-target-student-btn" onclick="setRandomCardTargetType('student')"
-              class="py-1 px-3 rounded-lg text-xs font-black transition bg-white text-slate-900 border border-slate-900 shadow-xs">
-              👤 Cá nhân HS
-            </button>
-            <button type="button" id="random-card-target-group-btn" onclick="setRandomCardTargetType('group')"
-              class="py-1 px-3 rounded-lg text-xs font-black transition text-slate-600 hover:text-slate-900">
-              👥 Cả Nhóm / Tổ
-            </button>
+      <!-- Chọn Nhóm Thẻ & Đối tượng nhận thẻ bố trí gọn 2 cột chống tràn màn hình Windows -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3.5">
+        <div class="bg-amber-50/70 p-2.5 rounded-2xl border-2 border-slate-300 space-y-1.5">
+          <div class="flex flex-wrap items-center justify-between gap-1">
+            <span class="text-[11px] font-black uppercase tracking-wider text-slate-800">📂 Nhóm thẻ quay:</span>
+            <span id="random-card-pool-count" class="text-[10px] font-black text-indigo-700 bg-white px-2 py-0.5 rounded-lg border border-indigo-200">
+              Đang có 13 thẻ
+            </span>
           </div>
-        </div>
-
-        <!-- Chọn 1 học sinh -->
-        <div id="random-card-student-picker-wrap">
-          <select id="random-card-student-select"
-            class="w-full px-4 py-2.5 rounded-xl bg-white border-2 border-slate-900 font-black text-sm text-slate-900 outline-none">
+          <select id="random-card-category-select" onchange="handleRandomCardCategoryChange(this.value)"
+            class="w-full px-3 py-2 rounded-xl bg-white border-2 border-slate-900 font-black text-xs text-slate-900 outline-none cursor-pointer">
+            <option value="ALL">🌟 Tất cả các nhóm thẻ</option>
           </select>
         </div>
 
-        <!-- Chọn cả nhóm để phân phối đồng loạt -->
-        <div id="random-card-group-picker-wrap" class="hidden">
-          <select id="random-card-group-select"
-            class="w-full px-4 py-2.5 rounded-xl bg-emerald-50 border-2 border-slate-900 font-black text-sm text-slate-900 outline-none">
-          </select>
-          <p class="text-[11px] font-bold text-emerald-800 mt-1">✨ Khi bấm xác nhận, thẻ quay trúng sẽ được phân phối đồng loạt cho tất cả thành viên trong nhóm này.</p>
+        <div class="bg-slate-50 p-2.5 rounded-2xl border-2 border-slate-300 space-y-1.5">
+          <div class="flex items-center justify-between gap-1">
+            <span class="text-[11px] font-black uppercase tracking-wider text-slate-700">🎁 Người nhận:</span>
+            <div class="flex gap-1 bg-slate-200/80 p-0.5 rounded-lg">
+              <button type="button" id="random-card-target-student-btn" onclick="setRandomCardTargetType('student')"
+                class="py-0.5 px-2 rounded-md text-[10px] font-black transition bg-white text-slate-900 border border-slate-900 shadow-xs">
+                👤 Cá nhân
+              </button>
+              <button type="button" id="random-card-target-group-btn" onclick="setRandomCardTargetType('group')"
+                class="py-0.5 px-2 rounded-md text-[10px] font-black transition text-slate-600 hover:text-slate-900">
+                👥 Cả nhóm
+              </button>
+            </div>
+          </div>
+
+          <div id="random-card-student-picker-wrap">
+            <select id="random-card-student-select"
+              class="w-full px-3 py-2 rounded-xl bg-white border-2 border-slate-900 font-black text-xs text-slate-900 outline-none">
+            </select>
+          </div>
+
+          <div id="random-card-group-picker-wrap" class="hidden">
+            <select id="random-card-group-select"
+              class="w-full px-3 py-2 rounded-xl bg-emerald-50 border-2 border-slate-900 font-black text-xs text-slate-900 outline-none">
+            </select>
+          </div>
         </div>
       </div>
 
       <!-- Sân khấu lật thẻ 3D bí ẩn (3D Mystery Card Flip) -->
-      <div id="random-card-stage-container" class="mb-5 flex items-center justify-center min-h-[360px] bg-amber-50/60 p-4 rounded-3xl border-2 border-dashed border-slate-900">
+      <div id="random-card-stage-container" class="mb-3.5 flex flex-col items-center justify-center min-h-[300px] sm:min-h-[340px] bg-amber-50/60 p-3 rounded-3xl border-2 border-dashed border-slate-900">
         <div id="random-card-flip-stage" class="card-flip-stage">
           <div id="random-card-flipper" class="card-flip-flipper">
             <!-- Mặt úp bí ẩn của thẻ -->
@@ -1098,6 +1096,8 @@
             </div>
           </div>
         </div>
+        <!-- Hộp hiển thị rõ toàn bộ nội dung thẻ vừa bốc trúng (Chống khuất chữ trên màn hình nhỏ) -->
+        <div id="random-card-drawn-summary" class="hidden w-full mt-3 p-3 rounded-2xl bg-white border-2 border-slate-900 shadow-[0_3px_0_#1e293b] text-left"></div>
       </div>
 
       <div class="flex flex-col sm:flex-row gap-3">
@@ -1114,7 +1114,7 @@
   </div>
 
   <!-- MODAL 4: SOẠN NỘI DUNG & CHỌN PHÔI THẺ TỪ FOLDER CARD -->
-  <div id="card-editor-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div id="card-editor-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
     <div class="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 border-2 border-slate-900 shadow-[0_12px_0_#1e293b] max-h-[92vh] overflow-y-auto animate-pop">
       <div class="flex items-center justify-between mb-4">
         <div>
@@ -1203,7 +1203,7 @@
   </div>
 
   <!-- MODAL 5: XEM TRƯỚC FILE PDF THẺ -->
-  <div id="pdf-preview-modal" class="fixed inset-0 bg-slate-900/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div id="pdf-preview-modal" class="fixed inset-0 bg-slate-900/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
     <div class="bg-white rounded-3xl max-w-4xl w-full h-[85vh] flex flex-col border-2 border-slate-900 shadow-[0_12px_0_#1e293b] overflow-hidden animate-pop">
       <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
         <div>
@@ -1217,7 +1217,7 @@
   </div>
 
   <!-- MODAL 6: THÊM HỌC SINH MỚI -->
-  <div id="add-student-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div id="add-student-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
     <div class="bg-white rounded-3xl max-w-lg w-full p-6 border-2 border-slate-800 shadow-[0_12px_0_#1e293b] max-h-[92vh] overflow-y-auto animate-pop">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-black text-slate-900">+ Thêm Học Sinh Mới</h3>
@@ -1272,8 +1272,8 @@
   </div>
 
   <!-- MODAL 7: THÊM LỚP HỌC MỚI -->
-  <div id="add-class-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 border-2 border-slate-900 shadow-[0_12px_0_#1e293b] animate-pop">
+  <div id="add-class-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 border-2 border-slate-900 shadow-[0_10px_0_#1e293b] max-h-[90vh] overflow-y-auto my-auto animate-pop">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-black text-slate-900">+ Tạo Lớp Học Mới</h3>
         <button onclick="closeModal('add-class-modal')" class="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-100 text-slate-900 font-black">✕</button>
@@ -1300,7 +1300,7 @@
   <!-- ========================================================================
        MODAL 8: NHẬP DANH SÁCH HỌC SINH HÀNG LOẠT
        ======================================================================== -->
-  <div id="bulk-import-students-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div id="bulk-import-students-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
     <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 border-2 border-slate-900 shadow-[0_12px_0_#1e293b] max-h-[92vh] overflow-y-auto animate-pop">
       <div class="flex items-center justify-between mb-4">
         <div>
@@ -1378,7 +1378,7 @@
   <!-- ========================================================================
        MODAL 9: NHẬP HÀNG LOẠT CÂU HỎI SINH THẺ BÀI TỰ ĐỘNG
        ======================================================================== -->
-  <div id="bulk-import-cards-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div id="bulk-import-cards-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
     <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 border-2 border-slate-900 shadow-[0_12px_0_#1e293b] max-h-[92vh] overflow-y-auto animate-pop">
       <div class="flex items-center justify-between mb-4">
         <div>
@@ -1470,8 +1470,8 @@
   <!-- ========================================================================
        MODAL 10: HỌC SINH TỰ ĐỔI MẬT KHẨU CÁ NHÂN
        ======================================================================== -->
-  <div id="student-change-password-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 border-2 border-slate-900 shadow-[0_12px_0_#1e293b] animate-pop">
+  <div id="student-change-password-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 border-2 border-slate-900 shadow-[0_10px_0_#1e293b] max-h-[90vh] overflow-y-auto my-auto animate-pop">
       <div class="flex items-center justify-between mb-4">
         <div>
           <span class="text-[11px] font-black uppercase tracking-wider bg-amber-300 text-slate-900 border border-slate-900 px-2.5 py-0.5 rounded-full">
@@ -1510,8 +1510,8 @@
   <!-- ========================================================================
        MODAL 11: CHỈNH SỬA THÔNG TIN GIÁO VIÊN
        ======================================================================== -->
-  <div id="edit-teacher-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="relative bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 border-2 border-slate-800 shadow-[0_12px_0_#1e293b] animate-pop">
+  <div id="edit-teacher-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="relative bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 border-2 border-slate-800 shadow-[0_10px_0_#1e293b] max-h-[90vh] overflow-y-auto my-auto animate-pop">
       <button type="button" onclick="closeModal('edit-teacher-modal')"
         class="absolute top-5 right-5 w-9 h-9 rounded-full border-2 border-slate-800 bg-slate-100 hover:bg-rose-100 hover:text-rose-700 text-slate-900 font-black flex items-center justify-center transition">✕</button>
       <div class="mb-4 pr-10">
@@ -1547,7 +1547,7 @@
   <!-- ========================================================================
        MODAL 12: CHỈNH SỬA THÔNG TIN HỌC SINH
        ======================================================================== -->
-  <div id="edit-student-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div id="edit-student-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
     <div class="relative bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 border-2 border-slate-800 shadow-[0_12px_0_#1e293b] max-h-[92vh] overflow-y-auto animate-pop">
       <button type="button" onclick="closeModal('edit-student-modal')"
         class="absolute top-5 right-5 w-9 h-9 rounded-full border-2 border-slate-800 bg-slate-100 hover:bg-rose-100 hover:text-rose-700 text-slate-900 font-black flex items-center justify-center transition">✕</button>

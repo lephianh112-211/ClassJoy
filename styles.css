@@ -138,15 +138,16 @@ body {
 .number-line-wrapper {
   position: relative;
   overflow-x: auto;
-  padding: 10px 14px;
+  overflow-y: visible;
+  padding: 14px 16px;
   scrollbar-width: thin;
 }
 
 .number-line-container {
   position: relative;
   min-width: 920px;
-  padding-top: 64px;
-  padding-bottom: 64px;
+  padding-top: 66px;
+  padding-bottom: 66px;
   margin: 0 24px;
 }
 
@@ -473,7 +474,7 @@ body {
 }
 
 /* --------------------------------------------------------------------------
-   5. THẺ BÀI BOARDGAME & CON DẤU MỘC
+   5. THẺ BÀI BOARDGAME, MODAL CHỐNG TRÀN WINDOWS & CON DẤU MỘC
    -------------------------------------------------------------------------- */
 .game-card-pop {
   border: 2.5px solid #1e293b;
@@ -528,10 +529,24 @@ body {
   animation: popZoom 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
+/* Đảm bảo mọi Modal luôn cuộn mượt và không bao giờ bị cắt đầu/cuối trên màn hình Windows (DPI 125% - 150%) */
+div[id$="-modal"] {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+div[id$="-modal"] > div {
+  margin-top: auto;
+  margin-bottom: auto;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: #fdfbf7; }
-::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 
 /* --------------------------------------------------------------------------
@@ -553,7 +568,6 @@ body {
   flex-direction: column;
   justify-content: space-between;
   padding: 14px 14px;
-  user-select: none;
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
 }
 
@@ -562,32 +576,53 @@ body {
   box-shadow: 0 10px 0 #1e293b;
 }
 
-/* Vùng lòng thẻ chứa chữ nằm gọn hoàn toàn bên trong khung trắng của ảnh Card/*.jpg */
+/* Vùng lòng thẻ chứa chữ nằm gọn hoàn toàn bên trong khung trắng của ảnh Card/*.jpg - Hỗ trợ cuộn mượt không bị cắt chữ */
 .art-card-inner-parchment {
   position: absolute;
-  top: 17.5%;
-  bottom: 17.5%;
-  left: 19.5%;
-  right: 19.5%;
+  top: 17%;
+  bottom: 17%;
+  left: 18.5%;
+  right: 18.5%;
   background: transparent;
   border: none;
   box-shadow: none;
-  padding: 6px 4px;
+  padding: 4px 5px;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  justify-content: flex-start;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
   z-index: 10;
 }
 
-/* Hiệu ứng 3D Card Flip trong modal Random thẻ */
+.art-card-inner-parchment::-webkit-scrollbar {
+  width: 4px;
+}
+.art-card-inner-parchment::-webkit-scrollbar-track {
+  background: transparent;
+}
+.art-card-inner-parchment::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.35);
+  border-radius: 9999px;
+}
+
+/* Hiệu ứng 3D Card Flip trong modal Random thẻ - Tự co giãn trên màn hình laptop thấp */
 .card-flip-stage {
   perspective: 1200px;
-  width: 240px;
-  height: 355px;
+  width: 230px;
+  height: 338px;
   margin: 0 auto;
+}
+
+@media (max-height: 760px) {
+  .card-flip-stage {
+    width: 196px;
+    height: 288px;
+  }
 }
 
 .card-flip-flipper {

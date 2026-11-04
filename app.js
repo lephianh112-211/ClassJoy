@@ -1696,30 +1696,30 @@ function renderClassroom() {
               class="student-card cursor-pointer p-3 sm:p-4 flex flex-col justify-between items-center text-center select-none"
               title="Nhấp vào để Cộng/Trừ điểm hoặc xem chi tiết">
               
-              <div class="w-full flex items-center justify-between gap-1 mb-2">
-                <span class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-300">
+              <div class="w-full flex flex-wrap items-center justify-between gap-1 mb-2">
+                <span class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-300 shrink-0">
                   ${st.code}
                 </span>
-                <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-1 shrink-0">
                   ${pointBadgeHtml}
                   <button onclick="deleteStudent('${st.id}', event)" title="Xóa học sinh này khỏi lớp"
-                    class="w-6 h-6 rounded-lg bg-slate-100 hover:bg-rose-100 border border-slate-300 hover:border-rose-400 text-slate-400 hover:text-rose-600 font-black text-xs flex items-center justify-center transition">
+                    class="w-6 h-6 rounded-lg bg-slate-100 hover:bg-rose-100 border border-slate-300 hover:border-rose-400 text-slate-400 hover:text-rose-600 font-black text-xs flex items-center justify-center transition shrink-0">
                     ✕
                   </button>
                 </div>
               </div>
 
-              <div class="avatar-sticker w-16 h-16 sm:w-18 sm:h-18 rounded-2xl ${st.avatarBg} border-2 border-slate-900 flex items-center justify-center text-4xl shadow-sm my-1">
+              <div class="avatar-sticker w-16 h-16 sm:w-18 sm:h-18 rounded-2xl ${st.avatarBg} border-2 border-slate-900 flex items-center justify-center text-4xl shadow-sm my-1 shrink-0">
                 ${st.avatar}
               </div>
 
-              <div class="w-full mt-1">
-                <h4 class="font-black text-slate-900 text-sm sm:text-base leading-snug truncate" title="${st.name}">${st.name}</h4>
-                <div class="text-[11px] font-bold text-slate-400 mt-0.5">${st.group}</div>
+              <div class="w-full mt-1 min-w-0">
+                <h4 class="font-black text-slate-900 text-sm sm:text-base leading-snug break-words line-clamp-2 min-h-[2.25rem] flex items-center justify-center px-0.5" title="${st.name}">${st.name}</h4>
+                <div class="text-[11px] font-bold text-slate-400 mt-0.5 truncate">${st.group}</div>
                 ${miniBadgesHtml}
               </div>
 
-              <div class="w-full flex items-center justify-center gap-2 mt-2 pt-2 border-t-2 border-slate-100" onclick="event.stopPropagation()">
+              <div class="w-full flex flex-wrap items-center justify-center gap-1.5 mt-2 pt-2 border-t-2 border-slate-100" onclick="event.stopPropagation()">
                 <button onclick="quickAdjustPoint('${st.id}', -1, 'Nhắc nhở trên lớp')" title="Trừ 1 điểm nhanh"
                   class="pop-btn pop-btn-coral w-8 h-8 rounded-xl text-xs font-black">
                   -1
@@ -2482,9 +2482,9 @@ function renderStudentDetailModalContent(studentId) {
 
   const container = document.getElementById("student-modal-content");
   container.innerHTML = `
-    <!-- Nút đóng cố định ở góc trên bên phải của bảng thông tin học sinh -->
+    <!-- Nút đóng luôn ghim cố định ở góc trên bên phải ngay cả khi cuộn bảng thông tin học sinh -->
     <button type="button" onclick="closeModal('student-detail-modal')"
-      class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full border-2 border-slate-800 bg-slate-100 hover:bg-rose-100 hover:text-rose-700 hover:border-rose-400 text-slate-800 font-black text-lg flex items-center justify-center shadow-sm transition z-20"
+      class="sticky top-0 float-right -mt-1 -mr-1 sm:mt-0 sm:mr-0 w-10 h-10 rounded-full border-2 border-slate-800 bg-white hover:bg-rose-100 hover:text-rose-700 hover:border-rose-400 text-slate-800 font-black text-lg flex items-center justify-center shadow-[0_2px_0_#1e293b] transition z-30"
       title="Đóng bảng thông tin học sinh">
       ✕
     </button>
@@ -3420,14 +3420,16 @@ function renderVisualArtCard(card, state = "unused", options = {}) {
         </span>
       </div>
 
-      <!-- Vùng lòng thẻ trắng: Chữ nằm gọn bên trong khung màu trắng của ảnh Card/*.jpg -->
-      <div class="art-card-inner-parchment">
-        <div class="${isCompact ? 'text-xl mb-0.5' : 'text-2xl sm:text-3xl mb-1'} filter drop-shadow-sm leading-none shrink-0">${card.icon || (isPower ? '⚡' : '🎯')}</div>
-        <h4 class="font-black text-slate-900 ${isCompact ? 'text-[10px]' : 'text-[11px] sm:text-xs'} leading-tight text-center mb-1 px-0.5 break-words w-full shrink-0">${card.title || 'Tên Thẻ'}</h4>
-        <div class="w-6 h-0.5 bg-slate-300 rounded-full mb-1 shrink-0"></div>
-        <p class="${isCompact ? 'text-[9px]' : 'text-[10px] sm:text-[11px]'} font-bold text-slate-700 leading-snug text-center overflow-y-auto max-h-full scrollbar-thin px-0.5 break-words w-full">
-          ${card.description || 'Nội dung thẻ do giáo viên soạn...'}
-        </p>
+      <!-- Vùng lòng thẻ trắng: Tự động căn giữa khi chữ ngắn và cho phép lăn chuột cuộn mượt khi chữ dài -->
+      <div class="art-card-inner-parchment" onclick="event.stopPropagation()">
+        <div class="my-auto w-full flex flex-col items-center py-0.5">
+          <div class="${isCompact ? 'text-xl mb-0.5' : 'text-2xl sm:text-3xl mb-1'} filter drop-shadow-sm leading-none shrink-0">${card.icon || (isPower ? '⚡' : '🎯')}</div>
+          <h4 class="font-black text-slate-900 ${isCompact ? 'text-[10px]' : 'text-[11px] sm:text-xs'} leading-tight text-center mb-1 px-0.5 break-words w-full shrink-0">${card.title || 'Tên Thẻ'}</h4>
+          <div class="w-6 h-0.5 bg-slate-300 rounded-full mb-1 shrink-0"></div>
+          <p class="${isCompact ? 'text-[9px]' : 'text-[10px] sm:text-[11px]'} font-bold text-slate-700 leading-snug text-center px-0.5 break-words w-full">
+            ${card.description || 'Nội dung thẻ do giáo viên soạn...'}
+          </p>
+        </div>
       </div>
 
       <!-- Bottom footer bar -->
@@ -4289,45 +4291,7 @@ function renderStudentPortalProfileHtml(student, classObj) {
       </div>
     </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        ${
-          usedCards.length === 0
-            ? `<div class="col-span-full p-6 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 text-center text-xs font-bold text-slate-400">
-                Chưa có thẻ nào đã qua sử dụng hoặc hoàn thành.
-              </div>`
-            : usedCards
-                .map((inst) => {
-                  const tpl = findCardTemplate(inst.cardId, inst.type);
-                  if (!tpl) return "";
-                  return `
-                    <div class="relative rounded-3xl border-2 border-slate-300 bg-slate-100 p-5 card-used-state overflow-hidden">
-                      <div class="used-stamp">ĐÃ DÙNG • HOÀN THÀNH</div>
-                      <div class="flex items-center justify-between gap-2 mb-3">
-                        <span class="px-3 py-1 rounded-full text-xs font-black uppercase bg-slate-300 text-slate-700">
-                          🔒 ĐÃ SỬ DỤNG
-                        </span>
-                        <span class="text-xs font-black text-slate-400">${tpl.code}</span>
-                      </div>
-                      <div class="flex items-center gap-3 mb-2">
-                        <div class="w-12 h-12 rounded-2xl bg-slate-200 border border-slate-300 flex items-center justify-center text-2xl shrink-0">
-                          ${tpl.icon}
-                        </div>
-                        <div>
-                          <h5 class="text-base font-black text-slate-700 line-through">${tpl.title}</h5>
-                          <p class="text-xs font-bold text-slate-500">${tpl.description}</p>
-                        </div>
-                      </div>
-                      <div class="mt-3 pt-2.5 border-t border-slate-200 flex items-center justify-between text-xs font-black">
-                        <span class="text-slate-500">Nhận: ${inst.acquiredAt}</span>
-                        <span class="text-slate-700">Xong lúc: ${inst.usedAt}</span>
-                      </div>
-                    </div>
-                  `;
-                })
-                .join("")
-        }
-      </div>
-    </div>
+
   `;
 }
 
