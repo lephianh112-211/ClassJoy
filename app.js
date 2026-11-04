@@ -3478,6 +3478,8 @@ function handleRandomCardCategoryChange(val) {
   if (flipper) flipper.classList.remove("is-flipped");
   const assignBtn = document.getElementById("btn-assign-drawn-card");
   if (assignBtn) assignBtn.classList.add("hidden");
+  const summaryBox = document.getElementById("random-card-drawn-summary");
+  if (summaryBox) summaryBox.classList.add("hidden");
   updateRandomCardPoolCount(currentRandomCardMode);
 }
 
@@ -3517,6 +3519,8 @@ function setRandomCardMode(mode) {
   lastDrawnCardTemplate = null;
   const assignBtn = document.getElementById("btn-assign-drawn-card");
   if (assignBtn) assignBtn.classList.add("hidden");
+  const summaryBox = document.getElementById("random-card-drawn-summary");
+  if (summaryBox) summaryBox.classList.add("hidden");
 
   const spinBtn = document.getElementById("btn-spin-card");
   if (spinBtn) {
@@ -3572,8 +3576,10 @@ function spinRandomCard() {
   const frontContent = document.getElementById("random-card-front-content");
   const assignBtn = document.getElementById("btn-assign-drawn-card");
   const spinBtn = document.getElementById("btn-spin-card");
+  const summaryBox = document.getElementById("random-card-drawn-summary");
 
   if (assignBtn) assignBtn.classList.add("hidden");
+  if (summaryBox) summaryBox.classList.add("hidden");
   if (spinBtn) {
     spinBtn.disabled = true;
     spinBtn.classList.add("opacity-60");
@@ -3605,6 +3611,24 @@ function spinRandomCard() {
         frontContent.innerHTML = renderVisualArtCard(candidate, "unused", { maxWidth: "235px", type: currentRandomCardMode });
       }
 
+      if (summaryBox && candidate) {
+        const isPower = currentRandomCardMode === "power";
+        summaryBox.innerHTML = `
+          <div class="flex items-start gap-2.5">
+            <div class="w-9 h-9 rounded-xl ${isPower ? 'bg-amber-300' : 'bg-violet-300'} border-2 border-slate-900 flex items-center justify-center text-xl shrink-0">
+              ${candidate.icon || (isPower ? '⚡' : '🎯')}
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="font-black text-slate-900 text-xs sm:text-sm">${candidate.title}</span>
+                <span class="text-[10px] font-black px-2 py-0.5 rounded-full border ${isPower ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-violet-100 text-violet-900 border-violet-300'}">${candidate.category || ''}</span>
+              </div>
+              <p class="text-xs font-bold text-slate-700 mt-1 leading-relaxed break-words">${candidate.description}</p>
+            </div>
+          </div>
+        `;
+      }
+
       if (backCard) backCard.classList.remove("animate-pulse");
       if (flipper) {
         void flipper.offsetWidth; // Force reflow để trình duyệt nhận animation lật tiếp theo
@@ -3619,6 +3643,7 @@ function spinRandomCard() {
       setTimeout(() => {
         isSpinningRandomCard = false;
         if (assignBtn) assignBtn.classList.remove("hidden");
+        if (summaryBox && lastDrawnCardTemplate) summaryBox.classList.remove("hidden");
         if (spinBtn) {
           spinBtn.disabled = false;
           spinBtn.classList.remove("opacity-60");
