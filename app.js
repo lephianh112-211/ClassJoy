@@ -304,7 +304,7 @@ function loadState(user = currentFirebaseUser) {
       if (!parsed.pointLineMilestones) {
         parsed.pointLineMilestones = DEFAULT_DATA.pointLineMilestones;
       }
-      // Đảm bảo tài khoản Demo hoặc tài khoản mới có đầy đủ bộ thẻ mẫu mặc định mới nhất (14 Power Cards & 9 Challenge Cards)
+      // Đảm bảo tài khoản Demo hoặc tài khoản mới có đầy đủ bộ thẻ mẫu mặc định mới nhất (21 Power Cards & 12 Challenge Cards)
       if (key === "CLASSJOY_DEMO_STATE") {
         parsed.powerCards = JSON.parse(JSON.stringify(DEFAULT_DATA.powerCards));
         parsed.penaltyCards = JSON.parse(JSON.stringify(DEFAULT_DATA.penaltyCards));
