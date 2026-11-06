@@ -244,6 +244,75 @@ function normalizeCardCategory(rawCat, type, fallbackIdx = 0) {
 
 function sanitizeCardFrames(state) {
   if (!state) return;
+
+  // Đồng bộ các mốc Point Line mặc định (10, 20, 30... -> Bóc 1 Power card; 50, 100 -> Lựa chọn 1 Power card)
+  if (!Array.isArray(state.pointLineMilestones) || state.pointLineMilestones.length === 0) {
+    state.pointLineMilestones = JSON.parse(JSON.stringify(DEFAULT_DATA.pointLineMilestones));
+  } else {
+    DEFAULT_DATA.pointLineMilestones.forEach((defMs) => {
+      const exIdx = state.pointLineMilestones.findIndex((m) => m.id === defMs.id || Number(m.threshold) === Number(defMs.threshold));
+      if (exIdx >= 0) {
+        state.pointLineMilestones[exIdx] = {
+          ...state.pointLineMilestones[exIdx],
+          rewardTitle: defMs.rewardTitle,
+          icon: defMs.icon
+        };
+      } else {
+        state.pointLineMilestones.push(JSON.parse(JSON.stringify(defMs)));
+      }
+    });
+    state.pointLineMilestones.forEach((m) => {
+      const t = Number(m.threshold);
+      if (t === 50 || t === 100) {
+        m.rewardTitle = "Lựa chọn 1 Power card";
+      } else if (!m.rewardTitle || /rút 1 thẻ|kitkat|miễn kiểm tra|đại bàng|vip/i.test(m.rewardTitle)) {
+        m.rewardTitle = "Bóc 1 Power card";
+      }
+    });
+  }
+
+  // Đồng bộ đầy đủ 23 thẻ Power Card mặc định mới nhất cho cả Giáo viên & Cổng Học Sinh
+  if (!Array.isArray(state.powerCards) || state.powerCards.length === 0) {
+    state.powerCards = JSON.parse(JSON.stringify(DEFAULT_DATA.powerCards));
+  } else {
+    DEFAULT_DATA.powerCards.forEach((defCard) => {
+      const exIdx = state.powerCards.findIndex((c) => c.id === defCard.id || c.code === defCard.code);
+      if (exIdx >= 0) {
+        state.powerCards[exIdx] = {
+          ...state.powerCards[exIdx],
+          title: defCard.title,
+          description: defCard.description,
+          category: defCard.category,
+          icon: defCard.icon,
+          cardFrame: defCard.cardFrame
+        };
+      } else {
+        state.powerCards.push(JSON.parse(JSON.stringify(defCard)));
+      }
+    });
+  }
+
+  // Đồng bộ đầy đủ 14 thẻ Challenge Card mặc định mới nhất cho cả Giáo viên & Cổng Học Sinh
+  if (!Array.isArray(state.penaltyCards) || state.penaltyCards.length === 0) {
+    state.penaltyCards = JSON.parse(JSON.stringify(DEFAULT_DATA.penaltyCards));
+  } else {
+    DEFAULT_DATA.penaltyCards.forEach((defCard) => {
+      const exIdx = state.penaltyCards.findIndex((c) => c.id === defCard.id || c.code === defCard.code);
+      if (exIdx >= 0) {
+        state.penaltyCards[exIdx] = {
+          ...state.penaltyCards[exIdx],
+          title: defCard.title,
+          description: defCard.description,
+          category: defCard.category,
+          icon: defCard.icon,
+          cardFrame: defCard.cardFrame
+        };
+      } else {
+        state.penaltyCards.push(JSON.parse(JSON.stringify(defCard)));
+      }
+    });
+  }
+
   if (Array.isArray(state.powerCards)) {
     state.powerCards.forEach((c, idx) => {
       if (c.cardFrame) c.cardFrame = resolveFrameUrl(c.cardFrame);
@@ -301,10 +370,21 @@ function loadState(user = currentFirebaseUser) {
     const raw = localStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (!parsed.pointLineMilestones) {
-        parsed.pointLineMilestones = DEFAULT_DATA.pointLineMilestones;
+      if (!Array.isArray(parsed.pointLineMilestones) || parsed.pointLineMilestones.length === 0) {
+        parsed.pointLineMilestones = JSON.parse(JSON.stringify(DEFAULT_DATA.pointLineMilestones));
+      } else {
+        DEFAULT_DATA.pointLineMilestones.forEach((defMs) => {
+          const exIdx = parsed.pointLineMilestones.findIndex((m) => m.id === defMs.id || m.threshold === defMs.threshold);
+          if (exIdx >= 0) {
+            parsed.pointLineMilestones[exIdx] = {
+              ...parsed.pointLineMilestones[exIdx],
+              rewardTitle: defMs.rewardTitle,
+              icon: defMs.icon
+            };
+          }
+        });
       }
-      // Đảm bảo tài khoản Demo hoặc tài khoản mới có đầy đủ bộ thẻ mẫu mặc định mới nhất (21 Power Cards & 12 Challenge Cards)
+      // Đảm bảo tài khoản Demo hoặc tài khoản mới có đầy đủ bộ thẻ mẫu mặc định mới nhất (23 Power Cards & 14 Challenge Cards)
       if (key === "CLASSJOY_DEMO_STATE") {
         parsed.powerCards = JSON.parse(JSON.stringify(DEFAULT_DATA.powerCards));
         parsed.penaltyCards = JSON.parse(JSON.stringify(DEFAULT_DATA.penaltyCards));
@@ -692,14 +772,12 @@ function buildNumberLineHtml(milestones, studentScore = null, studentAvatar = ""
   const maxThreshold = Math.max(...sorted.map((m) => m.threshold), 20);
 
   function shortLabel(title) {
-    if (!title) return "Power Card";
-    if (title.toLowerCase().includes("kitkat")) return "Thẻ + Quà";
-    if (title.toLowerCase().includes("vip")) return "Card VIP";
-    if (title.toLowerCase().includes("miễn")) return "Miễn KT tuần";
-    if (title.toLowerCase().includes("đại bàng")) return "Đại Bàng Lớp";
-    if (title.toLowerCase().includes("power card")) return "Power Card";
-    if (title.length <= 13) return title;
-    return title.slice(0, 12) + "…";
+    if (!title) return "Bóc 1 Power card";
+    const lower = title.toLowerCase();
+    if (lower.includes("lựa chọn 1 power card")) return "Lựa chọn 1 Power card";
+    if (lower.includes("bóc 1 power card")) return "Bóc 1 Power card";
+    if (title.length <= 22) return title;
+    return title.slice(0, 20) + "…";
   }
 
   // Mốc gốc 0 trên trục số
@@ -828,7 +906,7 @@ function handleAddNewMilestone(e) {
 
   const threshold = parseInt(thresholdInput.value, 10);
   const icon = iconInput.value.trim() || "⚡";
-  const rewardTitle = rewardInput.value.trim() || "Rút 1 Thẻ Power Card";
+  const rewardTitle = rewardInput.value.trim() || "Bóc 1 Power card";
 
   if (isNaN(threshold) || threshold <= 0) return;
 
@@ -4147,11 +4225,31 @@ function renderStudentPortalProfile(code, password = "123456", skipPasswordCheck
         const cloudData = doc.data();
         if (cloudData && cloudData.students) {
           classObj.students = cloudData.students;
+          const hadOldDeck =
+            !cloudData.powerCards ||
+            cloudData.powerCards.length < DEFAULT_DATA.powerCards.length ||
+            !cloudData.penaltyCards ||
+            cloudData.penaltyCards.length < DEFAULT_DATA.penaltyCards.length ||
+            !cloudData.pointLineMilestones ||
+            cloudData.pointLineMilestones.length < DEFAULT_DATA.pointLineMilestones.length ||
+            cloudData.pointLineMilestones.some((m) => /Rút 1 Thẻ|KitKat|Miễn kiểm tra|Đại Bàng|VIP/i.test(m.rewardTitle || ""));
+
           if (cloudData.powerCards) appState.powerCards = cloudData.powerCards;
           if (cloudData.penaltyCards) appState.penaltyCards = cloudData.penaltyCards;
           if (cloudData.pointLineMilestones) appState.pointLineMilestones = cloudData.pointLineMilestones;
           if (typeof cloudData.isPointsHidden !== "undefined") appState.isPointsHidden = cloudData.isPointsHidden;
           sanitizeCardFrames(appState);
+
+          // Nếu dữ liệu trên Cloud shared_classes đang cũ, cập nhật ngược lại bộ thẻ & mốc Point Line mới lên Cloud
+          if (hadOldDeck) {
+            firestoreDb.collection("shared_classes").doc(classObj.id).set({
+              powerCards: appState.powerCards,
+              penaltyCards: appState.penaltyCards,
+              pointLineMilestones: appState.pointLineMilestones,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true }).catch(() => {});
+          }
+
           const updatedFound = findStudentByCode(code);
           if (updatedFound) {
             renderStudentPortalProfileHtml(updatedFound.student, updatedFound.classObj);
@@ -4167,6 +4265,8 @@ function renderStudentPortalProfile(code, password = "123456", skipPasswordCheck
 function renderStudentPortalProfileHtml(student, classObj) {
   const resultBox = document.getElementById("student-portal-result");
   if (!resultBox) return;
+
+  sanitizeCardFrames(appState);
 
   const unusedPowerCards = student.ownedCards.filter((c) => c.type === "power" && c.status === "unused");
   const unusedChallengeCards = student.ownedCards.filter((c) => c.type === "penalty" && c.status === "unused");
@@ -4220,6 +4320,7 @@ function renderStudentPortalProfileHtml(student, classObj) {
             📏 TRỤC SỐ POINT LINE CỦA EM
           </span>
           <h4 class="text-xl font-black text-slate-900 mt-1.5">Vị Trí Của Em Trên Trục Điểm Thưởng</h4>
+          <p class="text-xs font-bold text-slate-500 mt-0.5">Các mốc 10, 20, 30, 40, 60, 70, 80, 90: <strong>Bóc 1 Power card</strong> • Hai mốc đặc biệt 50 & 100: <strong>Lựa chọn 1 Power card</strong></p>
         </div>
         <div class="text-right">
           <span class="text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-300 px-3 py-1.5 rounded-xl inline-block">

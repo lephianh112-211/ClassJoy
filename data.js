@@ -68,16 +68,16 @@ const DEFAULT_DATA = {
 
   // Bảng đối chiếu mốc điểm Point Line (Dùng để đối chiếu mốc nhận Power Card)
   pointLineMilestones: [
-    { id: "ms-10", threshold: 10, rewardTitle: "Rút 1 Thẻ Power Card", icon: "⚡" },
-    { id: "ms-20", threshold: 20, rewardTitle: "Rút 1 Thẻ Power Card", icon: "⚡" },
-    { id: "ms-30", threshold: 30, rewardTitle: "Rút 1 Thẻ Power Card + Quà KitKat", icon: "🍫" },
-    { id: "ms-40", threshold: 40, rewardTitle: "Rút 1 Thẻ Power Card VIP", icon: "🌟" },
-    { id: "ms-50", threshold: 50, rewardTitle: "Đặc quyền Miễn kiểm tra tuần", icon: "👑" },
-    { id: "ms-60", threshold: 60, rewardTitle: "Rút 1 Thẻ Power Card", icon: "⚡" },
-    { id: "ms-70", threshold: 70, rewardTitle: "Rút 1 Thẻ Power Card", icon: "⚡" },
-    { id: "ms-80", threshold: 80, rewardTitle: "Rút 1 Thẻ Power Card VIP", icon: "🌟" },
-    { id: "ms-90", threshold: 90, rewardTitle: "Rút 1 Thẻ Power Card VIP", icon: "🌟" },
-    { id: "ms-100", threshold: 100, rewardTitle: "Danh hiệu Đại Bàng Lớp Học", icon: "🏆" }
+    { id: "ms-10", threshold: 10, rewardTitle: "Bóc 1 Power card", icon: "⚡" },
+    { id: "ms-20", threshold: 20, rewardTitle: "Bóc 1 Power card", icon: "⚡" },
+    { id: "ms-30", threshold: 30, rewardTitle: "Bóc 1 Power card", icon: "⚡" },
+    { id: "ms-40", threshold: 40, rewardTitle: "Bóc 1 Power card", icon: "⚡" },
+    { id: "ms-50", threshold: 50, rewardTitle: "Lựa chọn 1 Power card", icon: "👑" },
+    { id: "ms-60", threshold: 60, rewardTitle: "Bóc 1 Power card", icon: "⚡" },
+    { id: "ms-70", threshold: 70, rewardTitle: "Bóc 1 Power card", icon: "⚡" },
+    { id: "ms-80", threshold: 80, rewardTitle: "Bóc 1 Power card", icon: "⚡" },
+    { id: "ms-90", threshold: 90, rewardTitle: "Bóc 1 Power card", icon: "⚡" },
+    { id: "ms-100", threshold: 100, rewardTitle: "Lựa chọn 1 Power card", icon: "🏆" }
   ],
 
   // Tiêu chí cộng / trừ điểm nhanh kiểu ClassDojo
@@ -122,7 +122,7 @@ const DEFAULT_DATA = {
             "rarity": "SSR",
             "icon": "🤝",
             "gradient": "from-cyan-400 via-blue-500 to-indigo-600",
-            "description": "Có quyền gọi một bạn lên hỗ trợ, gợi ý cho nhiệm vụ cá nhân (nếu bạn đó đồng ý)",
+            "description": "Có quyền gọi một bạn lên hỗ trợ, gợi ý cho nhiệm vụ cá nhân (nếu bạn đó đồng ý và không tính hoạt động kiểm tra có tính điểm)",
             "usageRule": "Gọi trợ giúp khi gặp câu hỏi khó, nộp thẻ sau khi dùng.",
             "pdfUrl": "",
             "pdfPage": 2
@@ -136,7 +136,7 @@ const DEFAULT_DATA = {
             "rarity": "SR",
             "icon": "🎯",
             "gradient": "from-emerald-400 via-teal-500 to-cyan-600",
-            "description": "Được loại bỏ 1 đáp án sai trong một câu hỏi trắc nghiệm.",
+            "description": "Được loại bỏ 1 đáp án sai trong một câu hỏi trắc nghiệm (không tính hoạt động kiểm tra có tính điểm)",
             "usageRule": "Dùng khi làm bài tập hoặc kiểm tra trắc nghiệm trên lớp.",
             "pdfUrl": "",
             "pdfPage": 3
@@ -192,7 +192,7 @@ const DEFAULT_DATA = {
             "rarity": "UR",
             "icon": "⚡",
             "gradient": "from-slate-700 via-zinc-800 to-neutral-900",
-            "description": "Được lựa chọn 1 ngày để vô hiệu hóa tất cả các thẻ Power cards khác",
+            "description": "Được lựa chọn 1 ngày để vô hiệu hóa tất cả các thẻ Power cards khác (chọn trước ít nhất một ngày)",
             "usageRule": "Nộp thẻ bí mật cho giáo viên trước khi buổi học bắt đầu.",
             "pdfUrl": "",
             "pdfPage": 7
@@ -392,6 +392,34 @@ const DEFAULT_DATA = {
             "usageRule": "Đề xuất biệt danh với giáo viên để cập nhật lên màn hình lớp học trong 1 tuần.",
             "pdfUrl": "",
             "pdfPage": 21
+        },
+        {
+            "id": "pc-22",
+            "cardFrame": "21.jpg",
+            "code": "PWR-22",
+            "title": "Second Spin",
+            "category": "Nhóm Chiến lược",
+            "rarity": "SR",
+            "icon": "🔄",
+            "gradient": "from-sky-400 via-indigo-500 to-purple-600",
+            "description": "Khi Vòng Quay Gọi Tên Ngẫu Nhiên hoặc Vòng Quay Thẻ vừa dừng lại, được quyền yêu cầu giáo viên bấm quay lại thêm 1 lần nữa.",
+            "usageRule": "Sử dụng ngay sau khi vòng quay vừa dừng lại.",
+            "pdfUrl": "",
+            "pdfPage": 22
+        },
+        {
+            "id": "pc-23",
+            "cardFrame": "22.jpg",
+            "code": "PWR-23",
+            "title": "Team Bet",
+            "category": "Nhóm Chiến lược",
+            "rarity": "SSR",
+            "icon": "🚀",
+            "gradient": "from-amber-400 via-orange-500 to-red-500",
+            "description": "Đầu giờ thảo luận nhóm, dự đoán nhóm mình sẽ hoàn thành xong sớm nhất hoặc đạt điểm cao nhất; nếu đúng, cá nhân em được thưởng thêm +2 điểm.",
+            "usageRule": "Báo dự đoán với giáo viên vào đầu giờ thảo luận nhóm.",
+            "pdfUrl": "",
+            "pdfPage": 23
         }
     ],
 
@@ -405,7 +433,7 @@ const DEFAULT_DATA = {
             "category": "Nhóm Hỗ trợ giáo viên",
             "icon": "📚",
             "gradient": "from-amber-500 via-orange-600 to-yellow-600",
-            "description": "Giúp thầy cô thu gom bài tập hoặc vở.",
+            "description": "Giúp giáo viên thu gom học liệu (vở, bài tập, bài kiểm tra).",
             "usageRule": "Thu và kiểm đếm đủ vở/bài tập của các bạn nộp cho giáo viên.",
             "pdfUrl": "",
             "pdfPage": 1
@@ -418,7 +446,7 @@ const DEFAULT_DATA = {
             "category": "Nhóm Hỗ trợ giáo viên",
             "icon": "🧹",
             "gradient": "from-emerald-500 via-teal-600 to-cyan-600",
-            "description": "Giúp thầy cô xóa bảng trong tiết này (trừ đầu giờ và cuối giờ).",
+            "description": "Giúp giáo viên xóa bảng trong 1 tiết do giáo viên lựa chọn.",
             "usageRule": "Chủ động lau sạch bảng khi thầy cô viết hết bảng giữa tiết.",
             "pdfUrl": "",
             "pdfPage": 2
@@ -431,7 +459,7 @@ const DEFAULT_DATA = {
             "category": "Nhóm Phát triển Bản thân",
             "icon": "📝",
             "gradient": "from-blue-500 via-indigo-600 to-violet-700",
-            "description": "Em sẽ làm thêm bài tập về nhà để trở nên giỏi hơn.",
+            "description": "Em sẽ làm thêm bài tập về nhà để trở nên giỏi hơn (Lựa chọn số lượng và bài cụ thể do sự thống nhất của giáo viên và học sinh)",
             "usageRule": "Nhận thêm 1 bài tập rèn luyện từ giáo viên và hoàn thành vào buổi sau.",
             "pdfUrl": "",
             "pdfPage": 3
@@ -552,6 +580,32 @@ const DEFAULT_DATA = {
             "usageRule": "Nộp mục tiêu đầu tuần và báo cáo kết quả thực hiện cho giáo viên vào cuối tuần.",
             "pdfUrl": "",
             "pdfPage": 12
+        },
+        {
+            "id": "pen-13",
+            "cardFrame": "2.jpg",
+            "code": "CHL-13",
+            "title": "Digital Detox",
+            "category": "Nhóm Phát triển Bản thân",
+            "icon": "📵",
+            "gradient": "from-rose-400 via-pink-500 to-indigo-600",
+            "description": "Buổi tối ở nhà, dành 30 phút học bài hoàn toàn không chạm vào điện thoại/mạng xã hội (có xác nhận của phụ huynh).",
+            "usageRule": "Nhờ phụ huynh xác nhận đã hoàn thành 30 phút học bài không dùng điện thoại.",
+            "pdfUrl": "",
+            "pdfPage": 13
+        },
+        {
+            "id": "pen-14",
+            "cardFrame": "3.jpg",
+            "code": "CHL-14",
+            "title": "Early Bird",
+            "category": "Nhóm Phát triển Bản thân",
+            "icon": "🌅",
+            "gradient": "from-amber-400 via-yellow-500 to-orange-500",
+            "description": "Tự giác thức dậy đúng giờ, gấp chăn màn gọn gàng vào buổi sáng và chụp ảnh góc giường ngăn nắp gửi cho giáo viên (có xác nhận của phụ huynh).",
+            "usageRule": "Chụp ảnh góc giường ngăn nắp buổi sáng kèm xác nhận của phụ huynh gửi giáo viên.",
+            "pdfUrl": "",
+            "pdfPage": 14
         }
     ],
 
@@ -583,16 +637,16 @@ const DEFAULT_DATA = {
               status: "unused",
               acquiredAt: "28/10/2026 09:15",
               usedAt: null,
-              note: "Đạt mốc 10 điểm thưởng"
+              note: "Bóc 1 Power card (Mốc 10đ)"
             },
             {
               instanceId: "inst-102",
-              cardId: "pc-3",
+              cardId: "pc-12",
               type: "power",
               status: "used",
               acquiredAt: "20/10/2026 10:00",
               usedAt: "25/10/2026 08:30",
-              note: "Đã đổi 1 thanh KitKat trên lớp"
+              note: "Đã dùng Hộp Quà Bất Ngờ (Mystery Treat)"
             }
           ],
           history: [
@@ -616,21 +670,21 @@ const DEFAULT_DATA = {
           ownedCards: [
             {
               instanceId: "inst-103",
-              cardId: "pc-2",
+              cardId: "pc-22",
               type: "power",
               status: "unused",
               acquiredAt: "30/10/2026 14:20",
               usedAt: null,
-              note: "Đạt mốc 30 điểm thưởng"
+              note: "Bóc 1 Power card (Mốc 30đ)"
             },
             {
               instanceId: "inst-104",
-              cardId: "pc-1",
+              cardId: "pc-13",
               type: "power",
               status: "unused",
               acquiredAt: "31/10/2026 10:05",
               usedAt: null,
-              note: "Đạt mốc 20 điểm thưởng"
+              note: "Bóc 1 Power card (Mốc 20đ)"
             }
           ],
           history: [
@@ -659,7 +713,7 @@ const DEFAULT_DATA = {
               status: "unused",
               acquiredAt: "31/10/2026 09:40",
               usedAt: null,
-              note: "Nhận Challenge Card: Thử thách Truth or Dare"
+              note: "Nhận Challenge Card: Chuyên Gia Thu Gom (Homework Collector)"
             },
             {
               instanceId: "inst-106",
@@ -668,7 +722,7 @@ const DEFAULT_DATA = {
               status: "used",
               acquiredAt: "15/10/2026 08:00",
               usedAt: "18/10/2026 07:45",
-              note: "Đã dùng để hoãn bài tập Đại số"
+              note: "Đã dùng Trợ Thủ Đắc Lực (Teamwork Booster)"
             }
           ],
           history: [
@@ -696,7 +750,7 @@ const DEFAULT_DATA = {
               status: "unused",
               acquiredAt: "29/10/2026 11:10",
               usedAt: null,
-              note: "Đạt mốc 10 điểm thưởng"
+              note: "Bóc 1 Power card (Mốc 10đ)"
             }
           ],
           history: [
@@ -724,7 +778,7 @@ const DEFAULT_DATA = {
               status: "used",
               acquiredAt: "22/10/2026 10:30",
               usedAt: "22/10/2026 11:35",
-              note: "Đã hoàn thành Challenge Card Biệt đội Sạch Đẹp"
+              note: "Đã hoàn thành Hiệp Sĩ Xóa Bảng (Board Cleaner)"
             }
           ],
           history: [
@@ -751,16 +805,16 @@ const DEFAULT_DATA = {
               status: "used",
               acquiredAt: "12/10/2026 08:15",
               usedAt: "19/10/2026 08:05",
-              note: "Đã dùng hoãn kiểm tra miệng bài Hàm số"
+              note: "Đã dùng Cứu Nguy Phút Chót (Second Chance)"
             },
             {
               instanceId: "inst-110",
-              cardId: "pc-2",
+              cardId: "pc-14",
               type: "power",
               status: "unused",
               acquiredAt: "30/10/2026 09:00",
               usedAt: null,
-              note: "Đạt mốc 20 điểm thưởng"
+              note: "Bóc 1 Power card (Mốc 20đ)"
             }
           ],
           history: [
@@ -800,12 +854,12 @@ const DEFAULT_DATA = {
           ownedCards: [
             {
               instanceId: "inst-111",
-              cardId: "pc-3",
+              cardId: "pc-23",
               type: "power",
               status: "unused",
               acquiredAt: "27/10/2026 15:00",
               usedAt: null,
-              note: "Đạt mốc 20 điểm thưởng"
+              note: "Bóc 1 Power card (Mốc 20đ)"
             }
           ],
           history: [
@@ -828,12 +882,12 @@ const DEFAULT_DATA = {
           ownedCards: [
             {
               instanceId: "inst-112",
-              cardId: "pen-2",
+              cardId: "pen-13",
               type: "penalty",
               status: "unused",
               acquiredAt: "01/11/2026 07:50",
               usedAt: null,
-              note: "Nhận Challenge Card: Thử thách Tập trung"
+              note: "Nhận Challenge Card: Digital Detox"
             }
           ],
           history: [
@@ -887,7 +941,7 @@ const DEFAULT_DATA = {
               status: "unused",
               acquiredAt: "29/10/2026 10:00",
               usedAt: null,
-              note: "Đạt mốc 10 điểm"
+              note: "Bóc 1 Power card (Mốc 10đ)"
             }
           ],
           history: [
@@ -913,7 +967,7 @@ const DEFAULT_DATA = {
               status: "used",
               acquiredAt: "20/10/2026 09:00",
               usedAt: "24/10/2026 09:15",
-              note: "Đã đổi móc khóa lớp học"
+              note: "Đã dùng Loại Bỏ Nhiễu (Drop 1)"
             }
           ],
           history: [
