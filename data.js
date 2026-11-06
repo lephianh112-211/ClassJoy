@@ -280,6 +280,20 @@ const DEFAULT_DATA = {
             "usageRule": "Thông báo với giáo viên vào đầu buổi học để đổi chỗ ngồi.",
             "pdfUrl": "",
             "pdfPage": 13
+        },
+        {
+            "id": "pc-14",
+            "cardFrame": "6.jpg",
+            "code": "PWR-14",
+            "title": "Sweet Surprise",
+            "category": "Nhóm Tương tác",
+            "rarity": "SR",
+            "icon": "🎁",
+            "gradient": "from-pink-400 via-rose-500 to-amber-500",
+            "description": "Được chọn một món quà nhỏ từ giáo viên (một thanh KitKat, một móc khóa,...)",
+            "usageRule": "Đến gặp giáo viên sau tiết học để nhận món quà nhỏ em yêu thích.",
+            "pdfUrl": "",
+            "pdfPage": 14
         }
     ],
 
@@ -388,6 +402,19 @@ const DEFAULT_DATA = {
             "usageRule": "Đứng trước lớp hô nhịp vươn vai thư giãn 60 giây giữa tiết học.",
             "pdfUrl": "",
             "pdfPage": 8
+        },
+        {
+            "id": "pen-9",
+            "cardFrame": "22.jpg",
+            "code": "CHL-09",
+            "title": "Home Helper",
+            "category": "Nhóm Phát triển Bản thân",
+            "icon": "🏠",
+            "gradient": "from-blue-400 via-indigo-500 to-teal-500",
+            "description": "Quay lại một video 3-5 phút mình làm việc nhà (có sự xác nhận của phụ huynh) để gửi cho giáo viên.",
+            "usageRule": "Quay video làm việc nhà 3-5 phút và gửi link/video cho giáo viên trước buổi học tiếp theo.",
+            "pdfUrl": "",
+            "pdfPage": 9
         }
     ],
 
