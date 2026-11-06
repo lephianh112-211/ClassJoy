@@ -45,9 +45,8 @@ const CARD_CATEGORIES = {
     "Nhóm Tương tác"
   ],
   penalty: [
-    "Nhóm Hỗ trợ giáo viên",
-    "Nhóm Phát triển Bản thân",
-    "Nhóm Kỹ năng Xã hội"
+    "Nhóm Hỗ trợ & Kỹ năng Xã hội",
+    "Nhóm Phát triển Bản thân"
   ]
 };
 
@@ -430,7 +429,7 @@ const DEFAULT_DATA = {
             "cardFrame": "14.jpg",
             "code": "CHL-01",
             "title": "Homework Collector",
-            "category": "Nhóm Hỗ trợ giáo viên",
+            "category": "Nhóm Hỗ trợ & Kỹ năng Xã hội",
             "icon": "📚",
             "gradient": "from-amber-500 via-orange-600 to-yellow-600",
             "description": "Giúp giáo viên thu gom học liệu (vở, bài tập, bài kiểm tra).",
@@ -443,7 +442,7 @@ const DEFAULT_DATA = {
             "cardFrame": "15.jpg",
             "code": "CHL-02",
             "title": "Board Cleaner",
-            "category": "Nhóm Hỗ trợ giáo viên",
+            "category": "Nhóm Hỗ trợ & Kỹ năng Xã hội",
             "icon": "🧹",
             "gradient": "from-emerald-500 via-teal-600 to-cyan-600",
             "description": "Giúp giáo viên xóa bảng trong 1 tiết do giáo viên lựa chọn.",
@@ -495,7 +494,7 @@ const DEFAULT_DATA = {
             "cardFrame": "19.jpg",
             "code": "CHL-06",
             "title": "Hey My Friend",
-            "category": "Nhóm Kỹ năng Xã hội",
+            "category": "Nhóm Hỗ trợ & Kỹ năng Xã hội",
             "icon": "💬",
             "gradient": "from-rose-500 via-pink-600 to-fuchsia-600",
             "description": "Nói/viết thư để gửi lời khen ngợi chân thành đến một bạn trong lớp.",
@@ -508,7 +507,7 @@ const DEFAULT_DATA = {
             "cardFrame": "20.jpg",
             "code": "CHL-07",
             "title": "Quick Drawing",
-            "category": "Nhóm Kỹ năng Xã hội",
+            "category": "Nhóm Hỗ trợ & Kỹ năng Xã hội",
             "icon": "🎨",
             "gradient": "from-cyan-500 via-sky-600 to-blue-700",
             "description": "Vẽ đồ vật chuyên dùng của một nghề nghiệp trong 5 giây để lớp đoán.",
@@ -521,7 +520,7 @@ const DEFAULT_DATA = {
             "cardFrame": "21.jpg",
             "code": "CHL-08",
             "title": "The Reset Routine",
-            "category": "Nhóm Kỹ năng Xã hội",
+            "category": "Nhóm Hỗ trợ & Kỹ năng Xã hội",
             "icon": "🧘",
             "gradient": "from-emerald-400 via-teal-500 to-green-600",
             "description": "Dẫn dắt cả lớp vươn vai, hít thở hoặc thả lỏng cơ thể 60 giây giữa giờ.",

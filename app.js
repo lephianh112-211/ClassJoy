@@ -203,7 +203,7 @@ function getCardCategories(type) {
   if (type === "power") {
     return ["Nhóm Trợ giúp học tập", "Nhóm Chiến lược", "Nhóm Tương tác"];
   }
-  return ["Nhóm Hỗ trợ giáo viên", "Nhóm Phát triển Bản thân", "Nhóm Kỹ năng Xã hội"];
+  return ["Nhóm Hỗ trợ & Kỹ năng Xã hội", "Nhóm Phát triển Bản thân"];
 }
 
 function normalizeCardCategory(rawCat, type, fallbackIdx = 0) {
@@ -215,8 +215,28 @@ function normalizeCardCategory(rawCat, type, fallbackIdx = 0) {
   const lower = clean.toLowerCase();
   // Khớp theo số thứ tự 1, 2, 3
   if (lower === "1" || lower === "nhóm 1") return categories[0];
-  if (lower === "2" || lower === "nhóm 2") return categories[1];
-  if (lower === "3" || lower === "nhóm 3") return categories[2];
+  if (lower === "2" || lower === "nhóm 2") return categories[1 % categories.length];
+  if (lower === "3" || lower === "nhóm 3") return categories[(type === "power" ? 2 : 0) % categories.length];
+
+  // Khớp theo từ khóa không dấu (tự động gộp Hỗ trợ giáo viên & Kỹ năng xã hội thành 1 nhóm ở Challenge Card)
+  const noAccent = lower.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d");
+  if (type === "power") {
+    if (noAccent.includes("tro giup") || noAccent.includes("hoc tap")) return categories[0];
+    if (noAccent.includes("chien luoc")) return categories[1];
+    if (noAccent.includes("tuong tac")) return categories[2];
+  } else {
+    if (
+      noAccent.includes("ho tro") ||
+      noAccent.includes("giao vien") ||
+      noAccent.includes("ky nang") ||
+      noAccent.includes("xa hoi")
+    ) {
+      return categories[0];
+    }
+    if (noAccent.includes("phat trien") || noAccent.includes("ban than")) {
+      return categories[1] || categories[0];
+    }
+  }
 
   // Khớp chính xác hoặc không phân biệt hoa thường
   for (const cat of categories) {
@@ -225,18 +245,6 @@ function normalizeCardCategory(rawCat, type, fallbackIdx = 0) {
     if (lower === catLower || lower === shortCatLower || lower.includes(shortCatLower) || shortCatLower.includes(lower)) {
       return cat;
     }
-  }
-
-  // Khớp theo từ khóa không dấu
-  const noAccent = lower.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d");
-  if (type === "power") {
-    if (noAccent.includes("tro giup") || noAccent.includes("hoc tap")) return categories[0];
-    if (noAccent.includes("chien luoc")) return categories[1];
-    if (noAccent.includes("tuong tac")) return categories[2];
-  } else {
-    if (noAccent.includes("ho tro") || noAccent.includes("giao vien")) return categories[0];
-    if (noAccent.includes("phat trien") || noAccent.includes("ban than")) return categories[1];
-    if (noAccent.includes("ky nang")) return categories[2];
   }
 
   return categories[fallbackIdx % categories.length];
@@ -3467,7 +3475,7 @@ function getCategoryBadgeStyle(category, isPower) {
     if (cat.includes("chiến lược")) return "bg-amber-100 text-amber-900 border-amber-300";
     return "bg-fuchsia-100 text-fuchsia-900 border-fuchsia-300";
   }
-  if (cat.includes("hỗ trợ")) return "bg-emerald-100 text-emerald-900 border-emerald-300";
+  if (cat.includes("hỗ trợ") || cat.includes("kỹ năng")) return "bg-emerald-100 text-emerald-900 border-emerald-300";
   if (cat.includes("phát triển")) return "bg-orange-100 text-orange-900 border-orange-300";
   return "bg-violet-100 text-violet-900 border-violet-300";
 }
@@ -5241,7 +5249,7 @@ function setBulkCardImportType(type) {
       submitBtn.textContent = "🎯 Sinh & Lưu Vào Kho Challenge Card";
     }
     if (hintEl) {
-      hintEl.innerHTML = `• <strong>3 nhóm Challenge Card</strong>: <code class="bg-white px-1.5 py-0.5 rounded border border-indigo-200">Nhóm Hỗ trợ giáo viên</code>, <code class="bg-white px-1.5 py-0.5 rounded border border-indigo-200">Nhóm Phát triển Bản thân</code>, <code class="bg-white px-1.5 py-0.5 rounded border border-indigo-200">Nhóm Kỹ năng</code>`;
+      hintEl.innerHTML = `• <strong>2 nhóm Challenge Card</strong>: <code class="bg-white px-1.5 py-0.5 rounded border border-indigo-200">Nhóm Hỗ trợ &amp; Kỹ năng Xã hội</code>, <code class="bg-white px-1.5 py-0.5 rounded border border-indigo-200">Nhóm Phát triển Bản thân</code>`;
     }
   }
 
@@ -5266,10 +5274,10 @@ function fillSampleCardsImport() {
     ].join("\n");
   } else {
     sample = [
-      "Vệ sinh bảng phấn | Cùng tổ trưởng lau sạch bảng và xếp lại phấn ngay ngắn cuối giờ | Nhóm Hỗ trợ giáo viên",
+      "Vệ sinh bảng phấn | Cùng tổ trưởng lau sạch bảng và xếp lại phấn ngay ngắn cuối giờ | Nhóm Hỗ trợ & Kỹ năng Xã hội",
       "Khởi động thể lực | Thực hiện 10 lần vươn vai nhảy tại chỗ để tái tạo năng lượng | Nhóm Phát triển Bản thân",
-      "Thuyết trình 1 phút | Kể lại 1 kiến thức thú vị em vừa học được cho cả lớp nghe | Nhóm Kỹ năng",
-      "Thử thách Toán vui | Giải nhanh 1 câu đố logic toán học trong 1 phút tại bục giảng | Nhóm Kỹ năng",
+      "Thuyết trình 1 phút | Kể lại 1 kiến thức thú vị em vừa học được cho cả lớp nghe | Nhóm Hỗ trợ & Kỹ năng Xã hội",
+      "Thử thách Toán vui | Giải nhanh 1 câu đố logic toán học trong 1 phút tại bục giảng | Nhóm Hỗ trợ & Kỹ năng Xã hội",
       "Hát hoặc Đọc thơ | Hát 1 bài hát hoặc đọc 4 câu thơ tặng cả lớp vào 3 phút cuối giờ | Nhóm Phát triển Bản thân"
     ].join("\n");
   }
@@ -5291,10 +5299,10 @@ function downloadCardExcelTemplate() {
         ["Trợ giúp đồng đội", "Được gọi 1 bạn trong bàn trợ giúp câu trả lời khi đang đứng phát biểu", "Nhóm Tương tác", "", ""]
       ]
     : [
-        ["Tên thẻ", "Nội dung thử thách / Câu hỏi", "Phân loại nhóm thẻ (Nhóm Hỗ trợ giáo viên / Nhóm Phát triển Bản thân / Nhóm Kỹ năng)", "Mã thẻ (Trống = Tự sinh)", "Phôi ảnh (1-24, Trống = Ngẫu nhiên)"],
-        ["Vệ sinh bảng phấn", "Cùng tổ trưởng lau sạch bảng và xếp lại phấn ngay ngắn cuối giờ", "Nhóm Hỗ trợ giáo viên", "CHL-04", "8"],
+        ["Tên thẻ", "Nội dung thử thách / Câu hỏi", "Phân loại nhóm thẻ (Nhóm Hỗ trợ & Kỹ năng Xã hội / Nhóm Phát triển Bản thân)", "Mã thẻ (Trống = Tự sinh)", "Phôi ảnh (1-24, Trống = Ngẫu nhiên)"],
+        ["Vệ sinh bảng phấn", "Cùng tổ trưởng lau sạch bảng và xếp lại phấn ngay ngắn cuối giờ", "Nhóm Hỗ trợ & Kỹ năng Xã hội", "CHL-04", "8"],
         ["Khởi động thể lực", "Thực hiện 10 lần vươn vai nhảy tại chỗ để tái tạo năng lượng", "Nhóm Phát triển Bản thân", "CHL-05", "15"],
-        ["Thuyết trình 1 phút", "Kể lại 1 kiến thức thú vị em vừa học được cho cả lớp nghe", "Nhóm Kỹ năng", "", ""]
+        ["Thuyết trình 1 phút", "Kể lại 1 kiến thức thú vị em vừa học được cho cả lớp nghe", "Nhóm Hỗ trợ & Kỹ năng Xã hội", "", ""]
       ];
 
   if (typeof XLSX !== "undefined") {
