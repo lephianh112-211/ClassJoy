@@ -300,7 +300,7 @@ function sanitizeCardFrames(state) {
     });
   }
 
-  // Đồng bộ đầy đủ 14 thẻ Challenge Card mặc định mới nhất cho cả Giáo viên & Cổng Học Sinh
+  // Đồng bộ đầy đủ 15 thẻ Challenge Card mặc định mới nhất cho cả Giáo viên & Cổng Học Sinh
   if (!Array.isArray(state.penaltyCards) || state.penaltyCards.length === 0) {
     state.penaltyCards = JSON.parse(JSON.stringify(DEFAULT_DATA.penaltyCards));
   } else {

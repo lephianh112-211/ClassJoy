@@ -605,6 +605,19 @@ const DEFAULT_DATA = {
             "usageRule": "Chụp ảnh góc giường ngăn nắp buổi sáng kèm xác nhận của phụ huynh gửi giáo viên.",
             "pdfUrl": "",
             "pdfPage": 14
+        },
+        {
+            "id": "pen-15",
+            "cardFrame": "4.jpg",
+            "code": "CHL-15",
+            "title": "Class Feedback",
+            "category": "Nhóm Hỗ trợ & Kỹ năng Xã hội",
+            "icon": "📋",
+            "gradient": "from-sky-400 via-cyan-500 to-teal-600",
+            "description": "Thu thập ít nhất 5 ý kiến/trải nghiệm từ các bạn về việc cải thiện lớp học.",
+            "usageRule": "Lắng nghe hoặc ghi lại 5 ý kiến đóng góp chân thành của các bạn gửi giáo viên.",
+            "pdfUrl": "",
+            "pdfPage": 15
         }
     ],
 
