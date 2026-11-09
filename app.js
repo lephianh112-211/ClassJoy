@@ -104,6 +104,28 @@ function extractClassShortCode(className) {
   return (initials || "LOP").slice(0, 6);
 }
 
+// Tạo phần tiền tố Tên Học Sinh viết tắt chuẩn (VD: "Nguyễn Hoàng Bách" -> "BACHNH", "Trần Lê Bảo Ngọc" -> "NGOCTLB")
+function buildStudentNameSlug(fullName) {
+  const raw = String(fullName || "").trim();
+  if (!raw) return "HS";
+  const noAccent = raw
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .replace(/[^A-Za-z0-9\s]/g, " ")
+    .trim();
+  const words = noAccent.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "HS";
+  if (words.length === 1) return words[0].toUpperCase().slice(0, 8);
+  const givenName = words[words.length - 1].toUpperCase();
+  const familyInitials = words
+    .slice(0, -1)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+  return (givenName + familyInitials).slice(0, 10);
+}
+
 function getUniqueClassPrefix(className, excludeClassId = null, stateObj = appState) {
   const base = extractClassShortCode(className || "LOP");
   const classes = (stateObj && Array.isArray(stateObj.classes)) ? stateObj.classes : [];
@@ -163,23 +185,32 @@ function isStudentCodeTaken(code, excludeStudentId = null, stateObj = appState) 
   return false;
 }
 
-function generateNextStudentCode(cls, offset = 0, stateObj = appState) {
+// Tự động sinh mã học sinh theo công thức: [TênViếtTắt]-[MãLớp]-[STT] (VD: BACHNH-10A1-01)
+function generateNextStudentCode(cls, offset = 0, stateObj = appState, studentName = "", excludeStudentId = null) {
   const prefix = getClassPrefix(cls, stateObj);
+  const nameSlug = buildStudentNameSlug(studentName);
+
+  // Tìm tập hợp các số thứ tự đuôi (-01, -02...) đã dùng trong lớp này
+  const usedNumbersInClass = new Set();
   let maxNum = 0;
   if (cls && Array.isArray(cls.students)) {
     cls.students.forEach((s) => {
-      const m = (s.code || "").match(/(\d+)$/);
+      if (excludeStudentId && s.id === excludeStudentId) return;
+      const m = (s.code || "").match(/-(\d+)$/);
       if (m) {
         const n = parseInt(m[1], 10);
+        usedNumbersInClass.add(n);
         if (n > maxNum) maxNum = n;
       }
     });
   }
+
   let candidateNum = maxNum + 1;
   let foundCount = 0;
   while (true) {
-    const candidate = `${prefix}-${String(candidateNum).padStart(2, "0")}`;
-    if (!isStudentCodeTaken(candidate, null, stateObj)) {
+    const numStr = String(candidateNum).padStart(2, "0");
+    const candidate = `${nameSlug}-${prefix}-${numStr}`;
+    if (!usedNumbersInClass.has(candidateNum) && !isStudentCodeTaken(candidate, excludeStudentId, stateObj)) {
       if (foundCount === offset) return candidate;
       foundCount++;
     }
@@ -414,26 +445,24 @@ function sanitizeCardFrames(state) {
       cls.classPrefix = prefix;
       seenClassPrefixes.add(prefix);
 
+      const usedClassNums = new Set();
       if (Array.isArray(cls.students)) {
         cls.students.forEach((st, idx) => {
-          // Chuẩn hóa mã HS cũ (HS01 -> 10A1-01) và chống trùng mã giữa các lớp khác nhau
-          if (!st.code || /^HS\d+$/i.test(st.code)) {
-            const numMatch = (st.code || "").match(/\d+/);
-            const num = numMatch ? parseInt(numMatch[0], 10) : idx + 1;
-            st.code = `${prefix}-${String(num).padStart(2, "0")}`;
+          const nameSlug = buildStudentNameSlug(st.name || "HS");
+          const numMatch = (st.code || "").match(/(\d+)$/);
+          let num = numMatch ? parseInt(numMatch[1], 10) : idx + 1;
+          if (num <= 0) num = idx + 1;
+
+          // Tự động chuẩn hóa sang công thức [TênViếtTắt]-[MãLớp]-[STT] và chống trùng tuyệt đối
+          let candidate = `${nameSlug}-${prefix}-${String(num).padStart(2, "0")}`;
+          while (usedClassNums.has(num) || seenGlobalStudentCodes.has(candidate)) {
+            num++;
+            candidate = `${nameSlug}-${prefix}-${String(num).padStart(2, "0")}`;
           }
-          let normalizedCode = String(st.code).trim().toUpperCase();
-          if (seenGlobalStudentCodes.has(normalizedCode)) {
-            // Tự động đổi sang tiền tố riêng của lớp nếu bị trùng mã với học sinh lớp trước
-            let num = idx + 1;
-            while (seenGlobalStudentCodes.has(`${prefix}-${String(num).padStart(2, "0")}`)) {
-              num++;
-            }
-            normalizedCode = `${prefix}-${String(num).padStart(2, "0")}`;
-          }
-          st.code = normalizedCode;
-          seenGlobalStudentCodes.add(normalizedCode);
-          st.username = normalizedCode.toLowerCase();
+          usedClassNums.add(num);
+          seenGlobalStudentCodes.add(candidate);
+          st.code = candidate;
+          st.username = candidate.toLowerCase();
           if (!st.password) {
             st.password = "123456";
           }
@@ -611,14 +640,10 @@ function findStudentByCode(code) {
     );
     if (st) return { student: st, classObj: cls };
   }
-  // Hỗ trợ tìm kiếm tương thích nếu nhập HS01, HS02...
-  const hsMatch = normalized.match(/^HS0*(\d+)$/);
-  if (hsMatch && appState.classes.length > 0) {
-    const suffix = `-${String(parseInt(hsMatch[1], 10)).padStart(2, "0")}`;
-    for (const cls of appState.classes) {
-      const st = cls.students.find((s) => (s.code || "").toUpperCase().endsWith(suffix));
-      if (st) return { student: st, classObj: cls };
-    }
+  // Hỗ trợ tìm tương thích nếu nhập mã rút gọn [MãLớp]-[STT] (VD: 10A1-01)
+  for (const cls of appState.classes) {
+    const st = cls.students.find((s) => (s.code || "").toUpperCase().endsWith(`-${normalized}`));
+    if (st) return { student: st, classObj: cls };
   }
   return null;
 }
@@ -4646,18 +4671,21 @@ function renderAvatarPickerGrid(gridId, inputId, previewId, selectedAvatar) {
 }
 
 function updateNewStudentAccountPreview() {
-  const codeVal = (document.getElementById("new-student-code")?.value || "").trim();
+  const cls = getCurrentClass();
+  const nameVal = (document.getElementById("new-student-name")?.value || "").trim();
+  const autoCode = generateNextStudentCode(cls, 0, appState, nameVal);
+  const codeInput = document.getElementById("new-student-code");
+  if (codeInput) codeInput.value = autoCode;
   const previewEl = document.getElementById("new-student-username-preview");
   if (previewEl) {
-    previewEl.textContent = (codeVal || "10a1-01").toLowerCase();
+    previewEl.textContent = autoCode.toLowerCase();
   }
 }
 
 function openAddStudentModal() {
-  document.getElementById("new-student-name").value = "";
+  const nameEl = document.getElementById("new-student-name");
+  if (nameEl) nameEl.value = "";
   const cls = getCurrentClass();
-  const autoCode = generateNextStudentCode(cls, 0);
-  document.getElementById("new-student-code").value = autoCode;
   const pwInput = document.getElementById("new-student-password");
   if (pwInput) pwInput.value = "123456";
   updateNewStudentAccountPreview();
@@ -4683,14 +4711,8 @@ function handleCreateStudent(e) {
   if (!cls) return;
 
   const name = document.getElementById("new-student-name").value.trim();
-  let code = document.getElementById("new-student-code").value.trim().toUpperCase();
-  if (!code) {
-    code = generateNextStudentCode(cls, 0);
-  }
-  if (isStudentCodeTaken(code, null, appState)) {
-    showToast(`⚠️ Mã học sinh "${code}" đã tồn tại ở lớp này hoặc lớp khác! Vui lòng đổi mã khác.`, "rose");
-    return;
-  }
+  // Luôn tự động sinh mã học sinh từ Tên + Lớp + STT để chống trùng 100%
+  const code = generateNextStudentCode(cls, 0, appState, name);
   const password = (document.getElementById("new-student-password")?.value || "123456").trim() || "123456";
   const username = code.toLowerCase();
   const group = document.getElementById("new-student-group").value;
@@ -4718,7 +4740,26 @@ function handleCreateStudent(e) {
   saveState();
   renderAll();
   closeModal("add-student-modal");
-  showToast(`🎉 Đã thêm ${name} (TK: ${username})!`, "emerald");
+  showToast(`🎉 Đã thêm ${name} (TK tự sinh: ${username})!`, "emerald");
+}
+
+function updateEditedStudentCodePreview() {
+  const studentId = document.getElementById("edit-student-id")?.value;
+  const found = findStudentById(studentId);
+  if (!found) return;
+  const { student, classObj } = found;
+  const newName = (document.getElementById("edit-student-name")?.value || "").trim();
+  const prefix = getClassPrefix(classObj, appState);
+  const nameSlug = buildStudentNameSlug(newName || student.name);
+  const numMatch = (student.code || "").match(/(\d+)$/);
+  let num = numMatch ? parseInt(numMatch[1], 10) : 1;
+  let candidate = `${nameSlug}-${prefix}-${String(num).padStart(2, "0")}`;
+  while (isStudentCodeTaken(candidate, student.id, appState)) {
+    num++;
+    candidate = `${nameSlug}-${prefix}-${String(num).padStart(2, "0")}`;
+  }
+  const codeEl = document.getElementById("edit-student-code");
+  if (codeEl) codeEl.value = candidate;
 }
 
 function openEditStudentModal(studentId) {
@@ -4751,20 +4792,24 @@ function handleSaveEditedStudent(e) {
   const { student, classObj } = found;
 
   const newName = document.getElementById("edit-student-name")?.value.trim();
-  const newCode = document.getElementById("edit-student-code")?.value.trim().toUpperCase();
   const newGroup = document.getElementById("edit-student-group")?.value;
   const newPoints = parseInt(document.getElementById("edit-student-points")?.value, 10);
   const newAvatar = document.getElementById("edit-student-avatar")?.value || student.avatar;
 
-  if (newCode && isStudentCodeTaken(newCode, student.id, appState)) {
-    showToast(`⚠️ Mã học sinh "${newCode}" đã bị trùng với một học sinh khác! Vui lòng nhập mã khác.`, "rose");
-    return;
-  }
-
-  if (newName) student.name = newName;
-  if (newCode) {
-    student.code = newCode;
-    student.username = newCode.toLowerCase();
+  if (newName) {
+    student.name = newName;
+    // Tự động cập nhật mã HS theo tên mới nhưng vẫn giữ số thứ tự (hoặc tự tăng nếu trùng)
+    const prefix = getClassPrefix(classObj, appState);
+    const nameSlug = buildStudentNameSlug(newName);
+    const numMatch = (student.code || "").match(/(\d+)$/);
+    let num = numMatch ? parseInt(numMatch[1], 10) : 1;
+    let candidate = `${nameSlug}-${prefix}-${String(num).padStart(2, "0")}`;
+    while (isStudentCodeTaken(candidate, student.id, appState)) {
+      num++;
+      candidate = `${nameSlug}-${prefix}-${String(num).padStart(2, "0")}`;
+    }
+    student.code = candidate;
+    student.username = candidate.toLowerCase();
   }
   if (newGroup) student.group = newGroup;
   if (!isNaN(newPoints) && newPoints !== student.points) {
@@ -4883,16 +4928,11 @@ function clearBulkStudentInput() {
 }
 
 function fillSampleStudentsImport() {
-  const cls = getCurrentClass();
-  const c1 = generateNextStudentCode(cls, 0);
-  const c2 = generateNextStudentCode(cls, 1);
-  const c3 = generateNextStudentCode(cls, 2);
-  const c4 = generateNextStudentCode(cls, 3);
   const sample = [
-    `Nguyễn Hoàng Nam | ${c1} | Nhóm 1 | 10 | 123456`,
-    `Trần Bảo An | ${c2} | Nhóm 2 | 10 | 123456`,
-    `Lê Thu Thảo | ${c3} | Nhóm 3 | 10 | 123456`,
-    `Phạm Minh Đức | ${c4} | Nhóm 4 | 10 | 123456`,
+    "Nguyễn Hoàng Nam | Nhóm 1 | 10 | 123456",
+    "Trần Bảo An | Nhóm 2 | 10 | 123456",
+    "Lê Thu Thảo | Nhóm 3 | 10 | 123456",
+    "Phạm Minh Đức | Nhóm 4 | 10 | 123456",
     "Vũ Quỳnh Chi",
     "Hoàng Gia Huy"
   ].join("\n");
@@ -4906,21 +4946,21 @@ function fillSampleStudentsImport() {
 
 function downloadStudentExcelTemplate() {
   const cls = getCurrentClass();
-  const prefix = extractClassShortCode(cls?.name || "10A1");
+  const prefix = getClassPrefix(cls, appState);
   const rows = [
-    ["Họ và tên", "Mã học sinh (Để trống tự sinh)", "Nhóm / Tổ", "Điểm ban đầu", "Mật khẩu (Mặc định 123456)"],
-    ["Nguyễn Hoàng Nam", `${prefix}-01`, "Nhóm 1", 10, "123456"],
-    ["Trần Bảo An", `${prefix}-02`, "Nhóm 2", 10, "123456"],
-    ["Lê Thu Thảo", "", "Nhóm 3", 10, "123456"],
-    ["Phạm Minh Đức", "", "Nhóm 4", 10, "123456"]
+    ["Họ và tên", "Nhóm / Tổ", "Điểm ban đầu", "Mật khẩu (Mặc định 123456)"],
+    ["Nguyễn Hoàng Nam", "Nhóm 1", 10, "123456"],
+    ["Trần Bảo An", "Nhóm 2", 10, "123456"],
+    ["Lê Thu Thảo", "Nhóm 3", 10, "123456"],
+    ["Phạm Minh Đức", "Nhóm 4", 10, "123456"]
   ];
   if (typeof XLSX !== "undefined") {
     const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws["!cols"] = [{ wch: 24 }, { wch: 28 }, { wch: 15 }, { wch: 15 }, { wch: 26 }];
+    ws["!cols"] = [{ wch: 26 }, { wch: 16 }, { wch: 16 }, { wch: 28 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "DanhSachHocSinh");
     XLSX.writeFile(wb, `Mau_Danh_Sach_Hoc_Sinh_${prefix}.xlsx`);
-    showToast("📥 Đã tải xuống file Excel mẫu danh sách học sinh!", "emerald");
+    showToast("📥 Đã tải xuống file Excel mẫu danh sách học sinh (hệ thống tự tạo mã TK)!", "emerald");
   } else {
     showToast("⚠️ Thư viện Excel đang tải, vui lòng thử lại sau giây lát!", "amber");
   }
@@ -4957,10 +4997,9 @@ function handleStudentFileUpload(e) {
           return;
         }
 
-        // 1. Phân tích dòng tiêu đề (nếu có) để nhận diện chính xác các cột
+        // 1. Phân tích dòng tiêu đề (nếu có) để nhận diện chính xác các cột (bỏ qua hoàn toàn cột Mã HS cũ nếu có)
         let headerRowIdx = -1;
         let colName = -1;
-        let colCode = -1;
         let colGroup = -1;
         let colPoints = -1;
         let colPass = -1;
@@ -4973,9 +5012,6 @@ function handleStudentFileUpload(e) {
             if (!val) continue;
             if (colName === -1 && /^(họ\s*và\s*tên|họ\s*tên|tên\s*học\s*sinh|tên|name|full\s*name)$/i.test(val)) {
               colName = c;
-              headerRowIdx = r;
-            } else if (colCode === -1 && /^(mã\s*học\s*sinh|mã\s*hs|mã|code|tài\s*khoản|username)/i.test(val)) {
-              colCode = c;
               headerRowIdx = r;
             } else if (colGroup === -1 && /^(nhóm|nhóm\s*\/\s*tổ|tổ|group|team|đội)/i.test(val)) {
               colGroup = c;
@@ -4999,62 +5035,53 @@ function handleStudentFileUpload(e) {
           if (!Array.isArray(row) || row.length === 0) continue;
 
           let name = "";
-          let code = "";
           let group = "";
           let pts = "";
           let pw = "";
 
           if (colName !== -1) {
-            // Nhận diện theo cột header đã tìm thấy
             name = String(row[colName] ?? "").trim();
-            code = colCode !== -1 ? String(row[colCode] ?? "").trim() : "";
             group = colGroup !== -1 ? String(row[colGroup] ?? "").trim() : "";
             pts = colPoints !== -1 ? String(row[colPoints] ?? "").trim() : "";
             pw = colPass !== -1 ? String(row[colPass] ?? "").trim() : "";
           } else {
-            // Không có header rõ ràng: tự động nhận diện theo vị trí cột
             const col0 = String(row[0] ?? "").trim();
             const col1 = String(row[1] ?? "").trim();
             const col2 = String(row[2] ?? "").trim();
             const col3 = String(row[3] ?? "").trim();
             const col4 = String(row[4] ?? "").trim();
-            const col5 = String(row[5] ?? "").trim();
 
             if (!col0 && !col1) continue;
 
             // Nếu cột 0 là STT (1, 2, 3...) và cột 1 là Họ tên
             if (/^\d+$/.test(col0) && col1 && !/^\d+$/.test(col1)) {
               name = col1;
-              code = col2;
-              group = col3;
-              pts = col4;
-              pw = col5;
+              group = isGroupValue(col2) ? col2 : (isGroupValue(col3) ? col3 : "");
+              pts = /^\d+$/.test(col2) ? col2 : (/^\d+$/.test(col3) ? col3 : "");
+              pw = col4;
             } else {
               name = col0;
-              code = col1;
-              group = col2;
-              pts = col3;
-              pw = col4;
-            }
-
-            // Kiểm tra thông minh: nếu ô code thực chất là tên Nhóm (ví dụ "Nhóm 1", "Nhóm 2", "Tổ 1"...)
-            if (isGroupValue(code)) {
-              if (!group) group = code;
-              code = "";
+              if (isGroupValue(col1)) {
+                group = col1;
+                pts = col2;
+                pw = col3;
+              } else if (isGroupValue(col2)) {
+                // Tương thích cả file Excel cũ từng có cột Mã HS ở cột 1
+                group = col2;
+                pts = col3;
+                pw = col4;
+              } else {
+                group = col1;
+                pts = col2;
+                pw = col3;
+              }
             }
           }
 
           if (!name) continue;
-          // Bỏ qua nếu là dòng tiêu đề lặp lại
           if (/^(họ\s*và\s*tên|họ\s*tên|tên\s*học\s*sinh|name|stt)$/i.test(name)) continue;
 
-          // Nếu code là placeholder text như "Để trống", "(để trống tự sinh)", "Tự sinh" -> coi như rỗng
-          if (/^(để\s*trống|tự\s*sinh|auto|none|trống|-|_)$/i.test(code)) {
-            code = "";
-          }
-
-          // Giữ nguyên đúng vị trí 5 cột, nếu mã để trống thì để trống giữa 2 dấu gạch đứng để không bị đẩy sang nhóm!
-          lines.push(`${name} | ${code} | ${group} | ${pts || 10} | ${pw || "123456"}`);
+          lines.push(`${name} | ${group} | ${pts || 10} | ${pw || "123456"}`);
         }
 
         const input = document.getElementById("bulk-students-input");
@@ -5062,7 +5089,7 @@ function handleStudentFileUpload(e) {
           input.value = lines.join("\n");
           previewBulkStudents();
         }
-        showToast(`📊 Đã đọc ${lines.length} học sinh từ file Excel "${file.name}"!`, "emerald");
+        showToast(`📊 Đã đọc ${lines.length} học sinh từ file Excel "${file.name}" và tự động sinh tài khoản!`, "emerald");
       } catch (err) {
         console.error("Excel read error:", err);
         showToast("❌ Không thể đọc file Excel này. Vui lòng kiểm tra định dạng!", "rose");
@@ -5099,38 +5126,41 @@ function parseStudentImportText(text) {
 
   const classPrefix = getClassPrefix(cls, appState);
 
-  // Thu thập toàn bộ các mã code đã tồn tại trên TẤT CẢ các lớp để tránh trùng lặp tuyệt đối
+  // Thu thập toàn bộ các mã code và số thứ tự đã tồn tại để chống trùng 100%
   const usedCodes = new Set();
+  const usedClassNums = new Set();
+  let maxClassNum = 0;
+
   if (Array.isArray(appState.classes)) {
     appState.classes.forEach((c) => {
       if (Array.isArray(c.students)) {
         c.students.forEach((s) => {
-          if (s.code) usedCodes.add(s.code.trim().toUpperCase());
+          if (s.code) {
+            const upper = s.code.trim().toUpperCase();
+            usedCodes.add(upper);
+            if (c.id === cls.id) {
+              const m = upper.match(/-(\d+)$/);
+              if (m) {
+                const n = parseInt(m[1], 10);
+                usedClassNums.add(n);
+                if (n > maxClassNum) maxClassNum = n;
+              }
+            }
+          }
         });
       }
     });
   }
 
-  // Thu thập các mã code được người dùng chỉ định rõ ràng trong danh sách import
-  lines.forEach((line) => {
-    let parts = [];
-    if (line.includes("|")) parts = line.split("|").map((p) => p.trim());
-    else if (line.includes("\t")) parts = line.split("\t").map((p) => p.trim());
-    else if (line.includes(",")) parts = line.split(",").map((p) => p.trim());
-    else parts = [line];
-
-    const rawCode = (parts[1] || "").trim();
-    if (rawCode && !isGroupValue(rawCode, existingGroups) && !/^(để\s*trống|tự\s*sinh|auto|none|trống|-|_)$/i.test(rawCode)) {
-      usedCodes.add(rawCode.toUpperCase());
-    }
-  });
-
-  function getNextAvailableCode() {
-    let num = 1;
+  function generateAutoCodeForImport(studentName) {
+    const nameSlug = buildStudentNameSlug(studentName);
+    let num = maxClassNum + 1;
     while (true) {
-      const candidate = `${classPrefix}-${String(num).padStart(2, "0")}`;
-      if (!usedCodes.has(candidate.toUpperCase())) {
-        usedCodes.add(candidate.toUpperCase());
+      const candidate = `${nameSlug}-${classPrefix}-${String(num).padStart(2, "0")}`;
+      if (!usedClassNums.has(num) && !usedCodes.has(candidate)) {
+        usedClassNums.add(num);
+        usedCodes.add(candidate);
+        maxClassNum = num;
         return candidate;
       }
       num++;
@@ -5160,29 +5190,31 @@ function parseStudentImportText(text) {
     const name = parts[0] || "";
     if (!name || /^(họ\s*và\s*tên|họ\s*tên|tên\s*học\s*sinh|name|stt)$/i.test(name)) return;
 
-    let code = (parts[1] || "").trim();
-    let group = (parts[2] || "").trim();
-    let ptsRaw = parts[3];
-    let pwRaw = parts[4];
+    let group = "";
+    let ptsRaw = undefined;
+    let pwRaw = undefined;
 
-    // Phát hiện nếu cột 1 thực chất là Tên Nhóm (do để trống mã học sinh hoặc file thiếu cột mã)
-    if (isGroupValue(code, existingGroups)) {
-      if (!group) group = code;
-      // Dịch các cột sau lại đúng vị trí
-      if (typeof ptsRaw === "undefined" && parts[2]) ptsRaw = parts[2];
-      if (typeof pwRaw === "undefined" && parts[3]) pwRaw = parts[3];
-      code = "";
-    } else if (/^(để\s*trống|tự\s*sinh|auto|none|trống|-|_)$/i.test(code)) {
-      code = "";
-    }
-
-    // Nếu mã học sinh để trống -> tự động sinh mã theo quy luật [MãLớp]-[STT] (VD: 10A1-01, 10A1-02...)
-    if (!code) {
-      code = getNextAvailableCode();
+    // Hỗ trợ cả định dạng 4 cột mới (Họ tên | Nhóm | Điểm | Mật khẩu) và 5 cột cũ (bỏ qua cột mã cũ)
+    const p1 = (parts[1] || "").trim();
+    if (isGroupValue(p1, existingGroups) || !p1) {
+      group = p1;
+      ptsRaw = parts[2];
+      pwRaw = parts[3];
+    } else if (isGroupValue(parts[2] || "", existingGroups)) {
+      group = (parts[2] || "").trim();
+      ptsRaw = parts[3];
+      pwRaw = parts[4];
+    } else if (/^\d+$/.test(p1)) {
+      ptsRaw = p1;
+      pwRaw = parts[2];
     } else {
-      code = code.toUpperCase();
-      usedCodes.add(code);
+      group = p1;
+      ptsRaw = parts[2];
+      pwRaw = parts[3];
     }
+
+    // Hệ thống luôn tự động sinh mã tài khoản độc nhất từ Tên + Lớp + STT
+    const code = generateAutoCodeForImport(name);
     const username = code.toLowerCase();
 
     // Nếu không có nhóm, tự động phân bổ vòng tròn vào các nhóm của lớp
