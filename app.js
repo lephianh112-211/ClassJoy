@@ -24,6 +24,7 @@ let currentAuthMode = "login"; // 'login' | 'register'
 let studentPortalLiveUnsub = null;
 let studentPortalLiveClassId = null;
 var cloudSharedClassesCache = {};
+var currentAppRole = "teacher"; // 'teacher' | 'student'
 
 try {
   if (typeof firebase !== "undefined") {
@@ -158,14 +159,18 @@ async function refreshCloudSharedClassesCache() {
 
 // Sinh mã định danh 3 ký tự riêng biệt cho từng tài khoản Google Giáo viên (VD: K7M, P4X, R9B)
 function getTeacherAccountTag(user = currentFirebaseUser, cls = null) {
-  let seed = "";
-  if (!isDemoMode && user && user.uid) {
-    seed = String(user.uid);
-  } else if (cls && cls.teacherUid) {
-    seed = String(cls.teacherUid);
-  } else if (cls && cls.id && /^cls_([A-Za-z0-9]+)_/.test(cls.id) && !cls.id.startsWith("cls_demo_")) {
-    seed = cls.id.match(/^cls_([A-Za-z0-9]+)_/)[1];
+  if (cls && cls.teacherTag && String(cls.teacherTag).trim()) {
+    return String(cls.teacherTag).trim().toUpperCase();
   }
+  let rawUid = "";
+  if (cls && cls.teacherUid) {
+    rawUid = String(cls.teacherUid);
+  } else if (cls && cls.id && /^cls_([A-Za-z0-9]+)_/.test(cls.id) && !cls.id.startsWith("cls_demo_")) {
+    rawUid = cls.id.match(/^cls_([A-Za-z0-9]+)_/)[1];
+  } else if (!isDemoMode && user && user.uid) {
+    rawUid = String(user.uid);
+  }
+  const seed = rawUid.slice(0, 6);
   if (!seed) return "";
 
   const alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -554,14 +559,32 @@ function sanitizeCardFrames(state) {
     });
   }
   if (Array.isArray(state.classes)) {
+    const isStudentViewing = typeof currentAppRole !== "undefined" && currentAppRole === "student";
     const seenClassPrefixes = new Set();
     const seenGlobalStudentCodes = new Set();
 
     state.classes.forEach((cls) => {
-      if (!isDemoMode && currentFirebaseUser && currentFirebaseUser.uid) {
+      // Nếu đang ở chế độ Học sinh xem thông tin, giữ nguyên tuyệt đối mã lớp và mã học sinh đã được giáo viên cấp
+      if (isStudentViewing) {
+        if (Array.isArray(cls.students)) {
+          cls.students.forEach((st) => {
+            if (st.code) st.username = st.code.toLowerCase();
+            if (!st.password) st.password = "123456";
+            if (Array.isArray(st.ownedCards)) {
+              st.ownedCards.forEach((c) => {
+                if (c.cardFrame) c.cardFrame = resolveFrameUrl(c.cardFrame);
+              });
+            }
+          });
+        }
+        return;
+      }
+
+      if (!isDemoMode && currentFirebaseUser && currentFirebaseUser.uid && !cls.teacherUid) {
         cls.teacherUid = currentFirebaseUser.uid;
       }
       const tTag = getTeacherAccountTag(currentFirebaseUser, cls);
+      if (tTag) cls.teacherTag = tTag;
       const { usedPrefixes: otherPrefixes, usedStudentCodes: otherCodes } = collectCrossAccountRegistry(cls.id, null, state);
 
       let prefix = (cls.classPrefix || "").trim().toUpperCase();
@@ -769,23 +792,102 @@ function findStudentById(studentId) {
   return null;
 }
 
-function findStudentByCode(code) {
+// Kiểm tra khớp mã học sinh linh hoạt (khớp chính xác mã đầy đủ ANNV-10A14JD-01 hoặc mã rút gọn ANNV-10A1-01 / 10A1-01)
+function matchStudentCodeLevel(student, classObj, rawQuery) {
+  const normalized = String(rawQuery || "").trim().toUpperCase();
+  if (!normalized || !student) return 0;
+  const sCode = String(student.code || "").trim().toUpperCase();
+  const sUser = String(student.username || "").trim().toUpperCase();
+
+  // Mức 3: Khớp chính xác tuyệt đối 100%
+  if (sCode === normalized || sUser === normalized) return 3;
+
+  // Mức 2: Khớp mã không kèm 3 ký tự định danh GV (VD: nhập annv-10a1-01 cho annv-10a14jd-01)
+  const baseClass = extractClassShortCode(classObj?.name || "");
+  const nameSlug = buildStudentNameSlug(student.name || "");
+  const numMatch = sCode.match(/-(\d+)$/);
+  if (baseClass && nameSlug && numMatch) {
+    const shortCode = `${nameSlug}-${baseClass}-${numMatch[1]}`.toUpperCase();
+    if (normalized === shortCode) return 2;
+  }
+  // Hoặc cắt 3 ký tự cuối của phần mã lớp nếu mã lớp dài hơn 4 ký tự
+  const parts = sCode.split("-");
+  if (parts.length === 3 && parts[1].length > 3) {
+    const strippedMid = parts[1].slice(0, -3);
+    if (normalized === `${parts[0]}-${strippedMid}-${parts[2]}`) return 2;
+  }
+
+  // Mức 1: Khớp phần đuôi [MãLớp]-[STT]
+  if (sCode.endsWith(`-${normalized}`)) return 1;
+  return 0;
+}
+
+function findStudentByCode(code, passwordHint = null) {
   const normalized = (code || "").trim().toUpperCase();
   if (!normalized) return null;
-  for (const cls of appState.classes) {
-    const st = cls.students.find(
-      (s) =>
-        (s.code || "").toUpperCase() === normalized ||
-        (s.username || "").toUpperCase() === normalized
-    );
-    if (st) return { student: st, classObj: cls };
+
+  const candidates = [];
+  const collectFromClasses = (classesArr, sourceType, extraState = null) => {
+    if (!Array.isArray(classesArr)) return;
+    classesArr.forEach((cls) => {
+      if (!cls || !Array.isArray(cls.students)) return;
+      cls.students.forEach((st) => {
+        const level = matchStudentCodeLevel(st, cls, normalized);
+        if (level > 0) {
+          const pwMatch = passwordHint !== null && String(st.password || "123456") === String(passwordHint);
+          candidates.push({ student: st, classObj: cls, level, pwMatch, sourceType, extraState });
+        }
+      });
+    });
+  };
+
+  // 1. Tìm trong appState hiện tại
+  collectFromClasses(appState?.classes, "current", appState);
+
+  // 2. Tìm trong tất cả các tài khoản Giáo viên lưu trên trình duyệt (LocalStorage)
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith("CLASSJOY_TEACHER_") || k === "CLASSJOY_DEMO_STATE")) {
+        const raw = localStorage.getItem(k);
+        if (!raw) continue;
+        const parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.classes)) {
+          applySavedStudentPasswords(parsed);
+          collectFromClasses(parsed.classes, "localStorage", parsed);
+        }
+      }
+    }
+  } catch (e) {
+    // Bỏ qua nếu lỗi đọc bộ nhớ
   }
-  // Hỗ trợ tìm tương thích nếu nhập mã rút gọn [MãLớp]-[STT] (VD: 10A1-01)
-  for (const cls of appState.classes) {
-    const st = cls.students.find((s) => (s.code || "").toUpperCase().endsWith(`-${normalized}`));
-    if (st) return { student: st, classObj: cls };
+
+  // 3. Tìm trong bộ dữ liệu mẫu DEFAULT_DATA (cho các nút TK Học sinh demo)
+  if (typeof DEFAULT_DATA !== "undefined" && Array.isArray(DEFAULT_DATA.classes)) {
+    const tempDefault = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    applySavedStudentPasswords(tempDefault);
+    collectFromClasses(tempDefault.classes, "default", tempDefault);
   }
-  return null;
+
+  if (candidates.length === 0) return null;
+
+  // Sắp xếp ưu tiên: Khớp chính xác mã (level cao) -> Khớp mật khẩu -> Nguồn hiện tại
+  candidates.sort((a, b) => {
+    if (b.level !== a.level) return b.level - a.level;
+    if (a.pwMatch !== b.pwMatch) return a.pwMatch ? -1 : 1;
+    return 0;
+  });
+
+  const best = candidates[0];
+  if (best.sourceType !== "current" && best.classObj) {
+    const existingIdx = appState.classes.findIndex((c) => c.id === best.classObj.id);
+    if (existingIdx >= 0) {
+      appState.classes[existingIdx] = best.classObj;
+    } else {
+      appState.classes.push(best.classObj);
+    }
+  }
+  return { student: best.student, classObj: best.classObj };
 }
 
 function findCardTemplate(cardId, type) {
@@ -1564,8 +1666,6 @@ function togglePointLineCollapse() {
   }
 }
 
-let currentAppRole = "teacher"; // 'teacher' | 'student'
-
 function enterMainApp(mode, studentCode = "", studentPassword = "123456") {
   document.getElementById("landing-screen").classList.add("hidden");
   document.getElementById("main-app").classList.remove("hidden");
@@ -1615,35 +1715,79 @@ async function quickStudentLookup(code, password = "123456") {
   if (errBox) errBox.classList.add("hidden");
 
   applySavedStudentPasswords(appState);
-  let found = findStudentByCode(code);
+  let found = findStudentByCode(code, password);
 
-  // Nếu chưa tìm thấy trong bộ nhớ cục bộ (hoặc mật khẩu ở bộ nhớ cục bộ không khớp), thử tìm trên Firestore shared_classes
+  // Nếu chưa tìm thấy trong bộ nhớ cục bộ (hoặc mật khẩu chưa khớp), tìm trên Cloud Firestore (cả shared_classes và teachers)
   if ((!found || String(found.student.password || "123456") !== String(password)) && firestoreDb) {
     try {
+      const cloudCandidates = [];
       const snap = await firestoreDb.collection("shared_classes").get();
-      let bestMatchDoc = null;
       snap.forEach((doc) => {
         const data = doc.data();
         if (data && Array.isArray(data.students)) {
-          const normalized = (code || "").trim().toUpperCase();
-          const matchSt = data.students.find(
-            (s) =>
-              (s.code || "").toUpperCase() === normalized ||
-              (s.username || "").toUpperCase() === normalized
-          );
-          if (matchSt) {
-            const stPw = String(matchSt.password || "123456");
-            // Ưu tiên chọn đúng lớp mà mật khẩu học sinh khớp chính xác (chống trùng giữa các lớp/giáo viên khác nhau)
-            if (!bestMatchDoc || stPw === String(password)) {
-              bestMatchDoc = { id: doc.id, data, matchSt };
+          const clsMeta = {
+            id: data.classId || doc.id,
+            teacherUid: data.teacherUid || "",
+            name: data.className || "Lớp học",
+            classPrefix: data.classPrefix || extractClassShortCode(data.className || "Lớp học")
+          };
+          data.students.forEach((s) => {
+            const level = matchStudentCodeLevel(s, clsMeta, code);
+            if (level > 0) {
+              const pwMatch = String(s.password || "123456") === String(password);
+              cloudCandidates.push({ docId: doc.id, data, matchSt: s, level, pwMatch });
             }
-          }
+          });
         }
       });
-      if (bestMatchDoc) {
-        const { id: docId, data, matchSt } = bestMatchDoc;
+
+      // Nếu trên shared_classes chưa có, quét dự phòng trong collection teachers trên Firestore
+      if (cloudCandidates.length === 0) {
+        const tSnap = await firestoreDb.collection("teachers").get();
+        tSnap.forEach((doc) => {
+          const tData = doc.data();
+          const tState = tData?.appState;
+          if (tState && Array.isArray(tState.classes)) {
+            tState.classes.forEach((cls) => {
+              if (!cls || !Array.isArray(cls.students)) return;
+              cls.students.forEach((s) => {
+                const level = matchStudentCodeLevel(s, cls, code);
+                if (level > 0) {
+                  const pwMatch = String(s.password || "123456") === String(password);
+                  cloudCandidates.push({
+                    docId: cls.id,
+                    data: {
+                      classId: cls.id,
+                      teacherUid: doc.id,
+                      className: cls.name,
+                      classPrefix: cls.classPrefix,
+                      students: cls.students,
+                      powerCards: tState.powerCards,
+                      penaltyCards: tState.penaltyCards,
+                      pointLineMilestones: tState.pointLineMilestones,
+                      isPointsHidden: tState.isPointsHidden
+                    },
+                    matchSt: s,
+                    level,
+                    pwMatch
+                  });
+                }
+              });
+            });
+          }
+        });
+      }
+
+      if (cloudCandidates.length > 0) {
+        cloudCandidates.sort((a, b) => {
+          if (b.level !== a.level) return b.level - a.level;
+          if (a.pwMatch !== b.pwMatch) return a.pwMatch ? -1 : 1;
+          return 0;
+        });
+        const { docId, data, matchSt } = cloudCandidates[0];
         const clsObj = {
           id: data.classId || docId,
+          teacherUid: data.teacherUid || "",
           name: data.className || "Lớp học",
           classPrefix: data.classPrefix || extractClassShortCode(data.className || "Lớp học"),
           groupsList: ["Nhóm 1", "Nhóm 2", "Nhóm 3", "Nhóm 4"],
@@ -1658,30 +1802,10 @@ async function quickStudentLookup(code, password = "123456") {
         if (data.powerCards) appState.powerCards = data.powerCards;
         if (data.penaltyCards) appState.penaltyCards = data.penaltyCards;
         if (data.pointLineMilestones) appState.pointLineMilestones = data.pointLineMilestones;
-        sanitizeCardFrames(appState);
         found = { student: matchSt, classObj: clsObj };
       }
     } catch (e) {
       console.warn("Lỗi tìm học sinh trên Cloud:", e);
-    }
-  }
-
-  // Nếu vẫn chưa thấy, nạp bộ dữ liệu mẫu DEFAULT_DATA để kiểm tra tài khoản demo
-  if (!found) {
-    const tempDefault = JSON.parse(JSON.stringify(DEFAULT_DATA));
-    sanitizeCardFrames(tempDefault);
-    const normalized = (code || "").trim().toUpperCase();
-    for (const c of tempDefault.classes) {
-      const st = c.students.find(
-        (s) =>
-          (s.code || "").toUpperCase() === normalized ||
-          (s.username || "").toUpperCase() === normalized
-      );
-      if (st) {
-        appState = tempDefault;
-        found = { student: st, classObj: c };
-        break;
-      }
     }
   }
 
@@ -1705,6 +1829,7 @@ async function quickStudentLookup(code, password = "123456") {
     return;
   }
 
+  currentAppRole = "student";
   updateTeacherInfoUI(found.student.name, `TK: ${(found.student.username || found.student.code).toLowerCase()}`, null);
   enterMainApp("student", found.student.code, expectedPw);
 }
@@ -4409,11 +4534,15 @@ function selectQuickPortalCode(code) {
   renderStudentPortalProfile(code, found ? (found.student.password || "123456") : "123456", true);
 }
 
-function handleStudentPortalSearch(e) {
+async function handleStudentPortalSearch(e) {
   e.preventDefault();
   const code = document.getElementById("portal-code-input").value.trim();
   const password = document.getElementById("portal-password-input")?.value.trim() || "123456";
-  renderStudentPortalProfile(code, password, false);
+  if (currentAppRole === "student") {
+    await quickStudentLookup(code, password);
+  } else {
+    renderStudentPortalProfile(code, password, false);
+  }
 }
 
 function renderStudentPortalProfile(code, password = "123456", skipPasswordCheck = false) {
@@ -4421,7 +4550,7 @@ function renderStudentPortalProfile(code, password = "123456", skipPasswordCheck
   if (!resultBox) return;
 
   applySavedStudentPasswords(appState);
-  const found = findStudentByCode(code);
+  const found = findStudentByCode(code, password);
   if (!found) {
     resultBox.innerHTML = `
       <div class="bg-white rounded-3xl p-8 text-center border-2 border-rose-400 shadow-[0_4px_0_#f43f5e]">
