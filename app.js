@@ -87,16 +87,15 @@ function resolveFrameUrl(path) {
 
 function extractClassShortCode(className) {
   const raw = (className || "").trim();
-  // Tìm mã lớp phổ biến như 10A1, 11B2, 12C, 6A, 9B1...
-  const match = raw.match(/\b(\d{1,2}[A-Za-z]+\d*)\b/);
-  if (match) return match[1].toUpperCase();
-  // Bỏ dấu tiếng Việt và lấy ký tự chữ/số viết tắt
   const noAccent = raw
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/đ/g, "d")
     .replace(/Đ/g, "D")
     .replace(/^Lop\s+/i, "");
+  // Tìm mã lớp phổ biến như 10A1, 11B2, 12C, 6A, 9B1...
+  const match = noAccent.match(/\b(\d{1,2}[A-Za-z]+\d*)\b/);
+  if (match) return match[1].toUpperCase();
   const words = noAccent.split(/[^A-Za-z0-9]+/).filter(Boolean);
   if (words.length === 1 && words[0].length <= 6) {
     return words[0].toUpperCase();
@@ -105,8 +104,67 @@ function extractClassShortCode(className) {
   return (initials || "LOP").slice(0, 6);
 }
 
-function generateNextStudentCode(cls, offset = 0) {
-  const prefix = extractClassShortCode(cls?.name || "LOP");
+function getUniqueClassPrefix(className, excludeClassId = null, stateObj = appState) {
+  const base = extractClassShortCode(className || "LOP");
+  const classes = (stateObj && Array.isArray(stateObj.classes)) ? stateObj.classes : [];
+  const usedPrefixes = new Set();
+
+  classes.forEach((c) => {
+    if (excludeClassId && c.id === excludeClassId) return;
+    const p = (c.classPrefix || extractClassShortCode(c.name || "")).trim().toUpperCase();
+    if (p) usedPrefixes.add(p);
+  });
+
+  if (!usedPrefixes.has(base)) return base;
+
+  // Nếu tên lớp có phần hậu tố môn học/nhà (VD: "10A1 - Toán" vs "10A1 - Tin"), thử ghép chữ cái đầu của hậu tố
+  const noAccent = String(className || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D");
+  const extraWords = noAccent
+    .split(/[^A-Za-z0-9]+/)
+    .filter((w) => w && w.toUpperCase() !== "LOP" && w.toUpperCase() !== base);
+  if (extraWords.length > 0) {
+    const suffixInitials = extraWords.map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+    const candidateWithSuffix = `${base}${suffixInitials}`;
+    if (!usedPrefixes.has(candidateWithSuffix)) return candidateWithSuffix;
+  }
+
+  let counter = 2;
+  while (usedPrefixes.has(`${base}_${counter}`) || usedPrefixes.has(`${base}${String.fromCharCode(64 + counter)}`)) {
+    counter++;
+  }
+  return counter <= 26 ? `${base}${String.fromCharCode(64 + counter)}` : `${base}_${counter}`;
+}
+
+function getClassPrefix(cls, stateObj = appState) {
+  if (!cls) return "LOP";
+  if (cls.classPrefix && String(cls.classPrefix).trim()) {
+    return String(cls.classPrefix).trim().toUpperCase();
+  }
+  return getUniqueClassPrefix(cls.name || "LOP", cls.id, stateObj);
+}
+
+function isStudentCodeTaken(code, excludeStudentId = null, stateObj = appState) {
+  const normalized = String(code || "").trim().toUpperCase();
+  if (!normalized) return false;
+  const classes = (stateObj && Array.isArray(stateObj.classes)) ? stateObj.classes : [];
+  for (const c of classes) {
+    if (!Array.isArray(c.students)) continue;
+    for (const s of c.students) {
+      if (excludeStudentId && s.id === excludeStudentId) continue;
+      if ((s.code || "").trim().toUpperCase() === normalized || (s.username || "").trim().toUpperCase() === normalized) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function generateNextStudentCode(cls, offset = 0, stateObj = appState) {
+  const prefix = getClassPrefix(cls, stateObj);
   let maxNum = 0;
   if (cls && Array.isArray(cls.students)) {
     cls.students.forEach((s) => {
@@ -117,8 +175,16 @@ function generateNextStudentCode(cls, offset = 0) {
       }
     });
   }
-  const nextNum = maxNum + 1 + offset;
-  return `${prefix}-${String(nextNum).padStart(2, "0")}`;
+  let candidateNum = maxNum + 1;
+  let foundCount = 0;
+  while (true) {
+    const candidate = `${prefix}-${String(candidateNum).padStart(2, "0")}`;
+    if (!isStudentCodeTaken(candidate, null, stateObj)) {
+      if (foundCount === offset) return candidate;
+      foundCount++;
+    }
+    candidateNum++;
+  }
 }
 
 const STUDENT_PW_STORAGE_KEY = "CLASSJOY_STUDENT_PASSWORDS";
@@ -334,17 +400,40 @@ function sanitizeCardFrames(state) {
     });
   }
   if (Array.isArray(state.classes)) {
+    const seenClassPrefixes = new Set();
+    const seenGlobalStudentCodes = new Set();
+
     state.classes.forEach((cls) => {
-      const prefix = extractClassShortCode(cls.name);
+      let prefix = (cls.classPrefix || "").trim().toUpperCase();
+      if (!prefix || seenClassPrefixes.has(prefix)) {
+        prefix = getUniqueClassPrefix(cls.name, cls.id, state);
+        while (seenClassPrefixes.has(prefix)) {
+          prefix = `${prefix}X`;
+        }
+      }
+      cls.classPrefix = prefix;
+      seenClassPrefixes.add(prefix);
+
       if (Array.isArray(cls.students)) {
         cls.students.forEach((st, idx) => {
-          // Chuẩn hóa mã HS cũ (HS01 -> 10A1-01) và tự động tạo tài khoản + mật khẩu mặc định 123456
+          // Chuẩn hóa mã HS cũ (HS01 -> 10A1-01) và chống trùng mã giữa các lớp khác nhau
           if (!st.code || /^HS\d+$/i.test(st.code)) {
             const numMatch = (st.code || "").match(/\d+/);
             const num = numMatch ? parseInt(numMatch[0], 10) : idx + 1;
             st.code = `${prefix}-${String(num).padStart(2, "0")}`;
           }
-          st.username = (st.username || st.code).toLowerCase();
+          let normalizedCode = String(st.code).trim().toUpperCase();
+          if (seenGlobalStudentCodes.has(normalizedCode)) {
+            // Tự động đổi sang tiền tố riêng của lớp nếu bị trùng mã với học sinh lớp trước
+            let num = idx + 1;
+            while (seenGlobalStudentCodes.has(`${prefix}-${String(num).padStart(2, "0")}`)) {
+              num++;
+            }
+            normalizedCode = `${prefix}-${String(num).padStart(2, "0")}`;
+          }
+          st.code = normalizedCode;
+          seenGlobalStudentCodes.add(normalizedCode);
+          st.username = normalizedCode.toLowerCase();
           if (!st.password) {
             st.password = "123456";
           }
@@ -967,32 +1056,25 @@ function setAuthMode(mode) {
   const nameField = document.getElementById("auth-name-field");
   const submitBtn = document.getElementById("auth-submit-btn");
 
-  if (mode === "register") {
-    if (tabRegister) tabRegister.className = "flex-1 py-1.5 px-3 rounded-lg text-xs font-black transition bg-white text-slate-900 border border-slate-900 shadow-xs";
-    if (tabLogin) tabLogin.className = "flex-1 py-1.5 px-3 rounded-lg text-xs font-black transition text-slate-600 hover:text-slate-900";
-    if (nameField) nameField.classList.remove("hidden");
-    if (submitBtn) submitBtn.innerHTML = "<span>✨ Tạo Tài Khoản & Bắt Đầu</span>";
-  } else {
-    if (tabLogin) tabLogin.className = "flex-1 py-1.5 px-3 rounded-lg text-xs font-black transition bg-white text-slate-900 border border-slate-900 shadow-xs";
-    if (tabRegister) tabRegister.className = "flex-1 py-1.5 px-3 rounded-lg text-xs font-black transition text-slate-600 hover:text-slate-900";
-    if (nameField) nameField.classList.add("hidden");
-    if (submitBtn) submitBtn.innerHTML = "<span>🚀 Đăng Nhập Vào Lớp Học</span>";
-  }
+  // Đã khóa đăng nhập/đăng ký bằng Email & Mật khẩu tự lập để bảo mật
 }
 
 async function loginWithGoogle() {
+  const errBox = document.getElementById("login-error");
+  if (errBox) errBox.classList.add("hidden");
+
   if (!firebaseAuth) {
     showToast("⚡ Đang mở chế độ Dùng thử (Demo)!", "amber");
     enterDemoMode();
     return;
   }
   const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
   try {
     const result = await firebaseAuth.signInWithPopup(provider);
     showToast(`👋 Xin chào ${result.user.displayName || result.user.email}!`, "emerald");
   } catch (error) {
     console.error("Google Sign-In Error:", error);
-    const errBox = document.getElementById("login-error");
     if (errBox) {
       errBox.textContent = "Lỗi đăng nhập Google: " + (error.message || error);
       errBox.classList.remove("hidden");
@@ -1001,44 +1083,9 @@ async function loginWithGoogle() {
 }
 
 async function handleTeacherAuthSubmit(e) {
-  e.preventDefault();
-  const email = document.getElementById("auth-email").value.trim();
-  const password = document.getElementById("auth-password").value.trim();
-  const name = document.getElementById("auth-name")?.value.trim() || "Giáo viên";
-  const errBox = document.getElementById("login-error");
-  if (errBox) errBox.classList.add("hidden");
-
-  if (!firebaseAuth) {
-    enterDemoMode();
-    return;
-  }
-
-  try {
-    if (currentAuthMode === "register") {
-      const cred = await firebaseAuth.createUserWithEmailAndPassword(email, password);
-      if (cred.user && name) {
-        await cred.user.updateProfile({ displayName: name });
-      }
-      showToast("🎉 Tạo tài khoản thành công!", "emerald");
-    } else {
-      await firebaseAuth.signInWithEmailAndPassword(email, password);
-      showToast("🚀 Đăng nhập thành công!", "emerald");
-    }
-  } catch (err) {
-    console.error("Auth error:", err);
-    if (errBox) {
-      let msg = err.message || "Đã xảy ra lỗi!";
-      if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password" || err.code === "auth/user-not-found") {
-        msg = "Email hoặc mật khẩu không chính xác!";
-      } else if (err.code === "auth/email-already-in-use") {
-        msg = "Email này đã được đăng ký. Vui lòng chuyển sang tab 'Đăng nhập'!";
-      } else if (err.code === "auth/weak-password") {
-        msg = "Mật khẩu tối thiểu 6 ký tự!";
-      }
-      errBox.textContent = msg;
-      errBox.classList.remove("hidden");
-    }
-  }
+  if (e && e.preventDefault) e.preventDefault();
+  showToast("🛡️ Hệ thống chỉ cho phép Giáo viên đăng nhập qua tài khoản Google để đảm bảo an toàn bảo mật!", "amber");
+  return;
 }
 
 async function logoutTeacher() {
@@ -1404,10 +1451,11 @@ async function quickStudentLookup(code, password = "123456") {
   applySavedStudentPasswords(appState);
   let found = findStudentByCode(code);
 
-  // Nếu chưa tìm thấy trong bộ nhớ cục bộ, thử tìm trên Firestore shared_classes
-  if (!found && firestoreDb) {
+  // Nếu chưa tìm thấy trong bộ nhớ cục bộ (hoặc mật khẩu ở bộ nhớ cục bộ không khớp), thử tìm trên Firestore shared_classes
+  if ((!found || String(found.student.password || "123456") !== String(password)) && firestoreDb) {
     try {
       const snap = await firestoreDb.collection("shared_classes").get();
+      let bestMatchDoc = null;
       snap.forEach((doc) => {
         const data = doc.data();
         if (data && Array.isArray(data.students)) {
@@ -1418,26 +1466,35 @@ async function quickStudentLookup(code, password = "123456") {
               (s.username || "").toUpperCase() === normalized
           );
           if (matchSt) {
-            const clsObj = {
-              id: data.classId || doc.id,
-              name: data.className || "Lớp học",
-              groupsList: ["Nhóm 1", "Nhóm 2", "Nhóm 3", "Nhóm 4"],
-              students: data.students
-            };
-            const existingIdx = appState.classes.findIndex((c) => c.id === clsObj.id);
-            if (existingIdx >= 0) {
-              appState.classes[existingIdx] = clsObj;
-            } else {
-              appState.classes.push(clsObj);
+            const stPw = String(matchSt.password || "123456");
+            // Ưu tiên chọn đúng lớp mà mật khẩu học sinh khớp chính xác (chống trùng giữa các lớp/giáo viên khác nhau)
+            if (!bestMatchDoc || stPw === String(password)) {
+              bestMatchDoc = { id: doc.id, data, matchSt };
             }
-            if (data.powerCards) appState.powerCards = data.powerCards;
-            if (data.penaltyCards) appState.penaltyCards = data.penaltyCards;
-            if (data.pointLineMilestones) appState.pointLineMilestones = data.pointLineMilestones;
-            sanitizeCardFrames(appState);
-            found = findStudentByCode(code);
           }
         }
       });
+      if (bestMatchDoc) {
+        const { id: docId, data, matchSt } = bestMatchDoc;
+        const clsObj = {
+          id: data.classId || docId,
+          name: data.className || "Lớp học",
+          classPrefix: data.classPrefix || extractClassShortCode(data.className || "Lớp học"),
+          groupsList: ["Nhóm 1", "Nhóm 2", "Nhóm 3", "Nhóm 4"],
+          students: data.students
+        };
+        const existingIdx = appState.classes.findIndex((c) => c.id === clsObj.id);
+        if (existingIdx >= 0) {
+          appState.classes[existingIdx] = clsObj;
+        } else {
+          appState.classes.push(clsObj);
+        }
+        if (data.powerCards) appState.powerCards = data.powerCards;
+        if (data.penaltyCards) appState.penaltyCards = data.penaltyCards;
+        if (data.pointLineMilestones) appState.pointLineMilestones = data.pointLineMilestones;
+        sanitizeCardFrames(appState);
+        found = { student: matchSt, classObj: clsObj };
+      }
     } catch (e) {
       console.warn("Lỗi tìm học sinh trên Cloud:", e);
     }
@@ -4626,7 +4683,14 @@ function handleCreateStudent(e) {
   if (!cls) return;
 
   const name = document.getElementById("new-student-name").value.trim();
-  const code = document.getElementById("new-student-code").value.trim().toUpperCase();
+  let code = document.getElementById("new-student-code").value.trim().toUpperCase();
+  if (!code) {
+    code = generateNextStudentCode(cls, 0);
+  }
+  if (isStudentCodeTaken(code, null, appState)) {
+    showToast(`⚠️ Mã học sinh "${code}" đã tồn tại ở lớp này hoặc lớp khác! Vui lòng đổi mã khác.`, "rose");
+    return;
+  }
   const password = (document.getElementById("new-student-password")?.value || "123456").trim() || "123456";
   const username = code.toLowerCase();
   const group = document.getElementById("new-student-group").value;
@@ -4692,6 +4756,11 @@ function handleSaveEditedStudent(e) {
   const newPoints = parseInt(document.getElementById("edit-student-points")?.value, 10);
   const newAvatar = document.getElementById("edit-student-avatar")?.value || student.avatar;
 
+  if (newCode && isStudentCodeTaken(newCode, student.id, appState)) {
+    showToast(`⚠️ Mã học sinh "${newCode}" đã bị trùng với một học sinh khác! Vui lòng nhập mã khác.`, "rose");
+    return;
+  }
+
   if (newName) student.name = newName;
   if (newCode) {
     student.code = newCode;
@@ -4731,9 +4800,33 @@ function handleSaveEditedStudent(e) {
   showToast(`✅ Đã lưu thông tin mới của ${student.name}!`, "emerald");
 }
 
+function updateNewClassPrefixPreview() {
+  const nameVal = document.getElementById("new-class-name")?.value.trim() || "";
+  const prefixInput = document.getElementById("new-class-prefix");
+  const sampleEl = document.getElementById("new-class-prefix-sample");
+  const suggested = getUniqueClassPrefix(nameVal || "LOP", null, appState);
+  if (prefixInput) {
+    prefixInput.value = suggested;
+  }
+  if (sampleEl) {
+    sampleEl.textContent = `${suggested.toLowerCase()}-01`;
+  }
+}
+
 function openAddClassModal() {
-  document.getElementById("new-class-name").value = "";
-  document.getElementById("new-class-room").value = "";
+  const nameEl = document.getElementById("new-class-name");
+  const roomEl = document.getElementById("new-class-room");
+  const prefixEl = document.getElementById("new-class-prefix");
+  if (nameEl) nameEl.value = "";
+  if (roomEl) roomEl.value = "";
+  if (prefixEl) {
+    prefixEl.value = getUniqueClassPrefix("LOP", null, appState);
+    prefixEl.oninput = () => {
+      const clean = prefixEl.value.trim().replace(/[^A-Za-z0-9_-]/g, "").toUpperCase();
+      const sampleEl = document.getElementById("new-class-prefix-sample");
+      if (sampleEl) sampleEl.textContent = `${(clean || "lop").toLowerCase()}-01`;
+    };
+  }
   document.getElementById("add-class-modal").classList.remove("hidden");
 }
 
@@ -4741,11 +4834,24 @@ function handleCreateClass(e) {
   e.preventDefault();
   const name = document.getElementById("new-class-name").value.trim();
   const room = document.getElementById("new-class-room").value.trim() || "Phòng học chính";
+  const rawPrefix = (document.getElementById("new-class-prefix")?.value || "").trim().replace(/[^A-Za-z0-9_-]/g, "").toUpperCase();
+  const desiredPrefix = rawPrefix || getUniqueClassPrefix(name, null, appState);
+
+  // Kiểm tra xem mã tiền tố lớp đã tồn tại ở lớp khác chưa
+  const duplicatePrefixClass = (appState.classes || []).find(
+    (c) => getClassPrefix(c, appState).toUpperCase() === desiredPrefix.toUpperCase()
+  );
+  if (duplicatePrefixClass) {
+    showToast(`⚠️ Mã tiền tố "${desiredPrefix}" đã được dùng cho lớp "${duplicatePrefixClass.name}"! Vui lòng đặt mã tiền tố khác (VD: ${desiredPrefix}B).`, "rose");
+    return;
+  }
+
   const userPrefix = currentFirebaseUser ? `cls_${currentFirebaseUser.uid.slice(0, 6)}_` : "cls_demo_";
 
   const newCls = {
     id: `${userPrefix}${Date.now()}`,
     name,
+    classPrefix: desiredPrefix,
     grade: "Khối Mới",
     room,
     groupsList: ["Nhóm 1", "Nhóm 2", "Nhóm 3", "Nhóm 4"],
@@ -4757,7 +4863,7 @@ function handleCreateClass(e) {
   saveState();
   renderAll();
   closeModal("add-class-modal");
-  showToast(`🏫 Đã tạo lớp "${name}" thành công!`, "indigo");
+  showToast(`🏫 Đã tạo lớp "${name}" (Mã tiền tố HS: ${desiredPrefix})!`, "indigo");
 }
 
 // ----------------------------------------------------------------------------
@@ -4991,13 +5097,17 @@ function parseStudentImportText(text) {
     ? cls.groupsList
     : ["Nhóm 1", "Nhóm 2", "Nhóm 3", "Nhóm 4"];
 
-  const classPrefix = extractClassShortCode(cls?.name || "10A1");
+  const classPrefix = getClassPrefix(cls, appState);
 
-  // Thu thập các mã code đã tồn tại để tránh trùng lặp
+  // Thu thập toàn bộ các mã code đã tồn tại trên TẤT CẢ các lớp để tránh trùng lặp tuyệt đối
   const usedCodes = new Set();
-  if (Array.isArray(cls.students)) {
-    cls.students.forEach((s) => {
-      if (s.code) usedCodes.add(s.code.toUpperCase());
+  if (Array.isArray(appState.classes)) {
+    appState.classes.forEach((c) => {
+      if (Array.isArray(c.students)) {
+        c.students.forEach((s) => {
+          if (s.code) usedCodes.add(s.code.trim().toUpperCase());
+        });
+      }
     });
   }
 
