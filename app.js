@@ -23,6 +23,7 @@ let isDemoMode = false;
 let currentAuthMode = "login"; // 'login' | 'register'
 let studentPortalLiveUnsub = null;
 let studentPortalLiveClassId = null;
+var cloudSharedClassesCache = {};
 
 try {
   if (typeof firebase !== "undefined") {
@@ -126,20 +127,144 @@ function buildStudentNameSlug(fullName) {
   return (givenName + familyInitials).slice(0, 10);
 }
 
-function getUniqueClassPrefix(className, excludeClassId = null, stateObj = appState) {
-  const base = extractClassShortCode(className || "LOP");
-  const classes = (stateObj && Array.isArray(stateObj.classes)) ? stateObj.classes : [];
-  const usedPrefixes = new Set();
+// Bộ nhớ đệm danh sách lớp & mã học sinh từ Cloud Firestore để chống trùng tuyệt đối giữa các tài khoản Gmail khác nhau
+async function refreshCloudSharedClassesCache() {
+  if (!firestoreDb) return;
+  try {
+    const snap = await firestoreDb.collection("shared_classes").get();
+    const nextCache = {};
+    snap.forEach((doc) => {
+      const data = doc.data();
+      if (!data) return;
+      const cId = data.classId || doc.id;
+      const codes = [];
+      if (Array.isArray(data.students)) {
+        data.students.forEach((s) => {
+          if (s && s.code) codes.push({ id: s.id, code: String(s.code).trim().toUpperCase() });
+        });
+      }
+      nextCache[cId] = {
+        classId: cId,
+        teacherUid: data.teacherUid || "",
+        classPrefix: String(data.classPrefix || "").trim().toUpperCase(),
+        students: codes
+      };
+    });
+    cloudSharedClassesCache = nextCache;
+  } catch (e) {
+    console.warn("Không thể làm mới bộ nhớ đệm shared_classes:", e);
+  }
+}
 
-  classes.forEach((c) => {
-    if (excludeClassId && c.id === excludeClassId) return;
-    const p = (c.classPrefix || extractClassShortCode(c.name || "")).trim().toUpperCase();
-    if (p) usedPrefixes.add(p);
+// Sinh mã định danh 3 ký tự riêng biệt cho từng tài khoản Google Giáo viên (VD: K7M, P4X, R9B)
+function getTeacherAccountTag(user = currentFirebaseUser, cls = null) {
+  let seed = "";
+  if (!isDemoMode && user && user.uid) {
+    seed = String(user.uid);
+  } else if (cls && cls.teacherUid) {
+    seed = String(cls.teacherUid);
+  } else if (cls && cls.id && /^cls_([A-Za-z0-9]+)_/.test(cls.id) && !cls.id.startsWith("cls_demo_")) {
+    seed = cls.id.match(/^cls_([A-Za-z0-9]+)_/)[1];
+  }
+  if (!seed) return "";
+
+  const alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+  let h1 = 2166136261;
+  let h2 = 16777619;
+  for (let i = 0; i < seed.length; i++) {
+    const ch = seed.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 16777619) >>> 0;
+    h2 = Math.imul(h2 + ch * (i + 1), 2246822519) >>> 0;
+  }
+  const c1 = alphabet[h1 % alphabet.length];
+  const c2 = alphabet[(h1 >>> 5) % alphabet.length];
+  const c3 = alphabet[h2 % alphabet.length];
+  return `${c1}${c2}${c3}`;
+}
+
+// Thu thập toàn bộ tiền tố lớp và mã học sinh đã tồn tại trên mọi tài khoản (LocalStorage + Cloud Firestore + hiện tại)
+function collectCrossAccountRegistry(excludeClassId = null, excludeStudentId = null, stateObj = appState) {
+  const usedPrefixes = new Set();
+  const usedStudentCodes = new Set();
+
+  const registerClassesList = (classesArr) => {
+    if (!Array.isArray(classesArr)) return;
+    classesArr.forEach((c) => {
+      if (!c) return;
+      if (!excludeClassId || c.id !== excludeClassId) {
+        const p = String(c.classPrefix || extractClassShortCode(c.name || "")).trim().toUpperCase();
+        if (p) usedPrefixes.add(p);
+      }
+      if (Array.isArray(c.students)) {
+        c.students.forEach((s) => {
+          if (!s) return;
+          if (excludeStudentId && s.id === excludeStudentId) return;
+          const sc = String(s.code || "").trim().toUpperCase();
+          const su = String(s.username || "").trim().toUpperCase();
+          if (sc) usedStudentCodes.add(sc);
+          if (su) usedStudentCodes.add(su);
+        });
+      }
+    });
+  };
+
+  // 1. Quét trong state hiện tại
+  if (stateObj && Array.isArray(stateObj.classes)) {
+    registerClassesList(stateObj.classes);
+  }
+
+  // 2. Nếu là tài khoản Giáo viên thật, khóa luôn các mã của lớp Demo mặc định (10A1, 11B2) để không bao giờ đụng tài khoản mẫu
+  if (!isDemoMode && typeof DEFAULT_DATA !== "undefined" && Array.isArray(DEFAULT_DATA.classes)) {
+    registerClassesList(DEFAULT_DATA.classes);
+  }
+
+  // 3. Quét toàn bộ các tài khoản Giáo viên khác đã từng đăng nhập trên trình duyệt này (LocalStorage)
+  const currentKey = typeof getStorageKey === "function" ? getStorageKey(currentFirebaseUser) : "";
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k || k === currentKey) continue;
+      if (k === "CLASSJOY_DEMO_STATE" || k.startsWith("CLASSJOY_TEACHER_")) {
+        if (isDemoMode && k.startsWith("CLASSJOY_TEACHER_")) continue;
+        const raw = localStorage.getItem(k);
+        if (!raw) continue;
+        const parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.classes)) {
+          registerClassesList(parsed.classes);
+        }
+      }
+    }
+  } catch (e) {
+    // Bỏ qua nếu lỗi đọc bộ nhớ
+  }
+
+  // 4. Quét bộ nhớ đệm Cloud Firestore (shared_classes của mọi tài khoản Gmail khác)
+  Object.values(cloudSharedClassesCache).forEach((entry) => {
+    if (!entry) return;
+    if (!excludeClassId || entry.classId !== excludeClassId) {
+      if (entry.classPrefix) usedPrefixes.add(entry.classPrefix);
+    }
+    if (Array.isArray(entry.students)) {
+      entry.students.forEach((st) => {
+        if (!st || (excludeStudentId && st.id === excludeStudentId)) return;
+        if (st.code) usedStudentCodes.add(st.code);
+      });
+    }
   });
 
-  if (!usedPrefixes.has(base)) return base;
+  return { usedPrefixes, usedStudentCodes };
+}
 
-  // Nếu tên lớp có phần hậu tố môn học/nhà (VD: "10A1 - Toán" vs "10A1 - Tin"), thử ghép chữ cái đầu của hậu tố
+function getUniqueClassPrefix(className, excludeClassId = null, stateObj = appState, user = currentFirebaseUser, clsObj = null) {
+  const base = extractClassShortCode(className || "LOP");
+  const tTag = getTeacherAccountTag(user, clsObj);
+  const { usedPrefixes } = collectCrossAccountRegistry(excludeClassId, null, stateObj);
+
+  // Ghép mã định danh riêng của Gmail Giáo viên vào mã lớp (VD: 10A1K7M, 10A1P4X) để 3-4 Gmail tạo cùng lớp 10A1 không bao giờ trùng
+  const primaryCandidate = tTag ? `${base}${tTag}` : base;
+  if (!usedPrefixes.has(primaryCandidate)) return primaryCandidate;
+
+  // Nếu cùng 1 giáo viên tạo 2 lớp trùng tên (VD: "10A1 - Toán" và "10A1 - Tin"), thử ghép thêm chữ cái đầu của hậu tố
   const noAccent = String(className || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -150,45 +275,43 @@ function getUniqueClassPrefix(className, excludeClassId = null, stateObj = appSt
     .filter((w) => w && w.toUpperCase() !== "LOP" && w.toUpperCase() !== base);
   if (extraWords.length > 0) {
     const suffixInitials = extraWords.map((w) => w[0]).join("").toUpperCase().slice(0, 2);
-    const candidateWithSuffix = `${base}${suffixInitials}`;
+    const candidateWithSuffix = tTag ? `${base}${suffixInitials}${tTag}` : `${base}${suffixInitials}`;
     if (!usedPrefixes.has(candidateWithSuffix)) return candidateWithSuffix;
   }
 
   let counter = 2;
-  while (usedPrefixes.has(`${base}_${counter}`) || usedPrefixes.has(`${base}${String.fromCharCode(64 + counter)}`)) {
+  while (true) {
+    const letterSuffix = counter <= 26 ? String.fromCharCode(64 + counter) : `${counter}`;
+    const candidate = tTag ? `${base}${letterSuffix}${tTag}` : `${base}${letterSuffix}`;
+    if (!usedPrefixes.has(candidate)) return candidate;
     counter++;
   }
-  return counter <= 26 ? `${base}${String.fromCharCode(64 + counter)}` : `${base}_${counter}`;
 }
 
-function getClassPrefix(cls, stateObj = appState) {
+function getClassPrefix(cls, stateObj = appState, user = currentFirebaseUser) {
   if (!cls) return "LOP";
+  const tTag = getTeacherAccountTag(user, cls);
   if (cls.classPrefix && String(cls.classPrefix).trim()) {
-    return String(cls.classPrefix).trim().toUpperCase();
+    const existing = String(cls.classPrefix).trim().toUpperCase();
+    if (!tTag || existing.endsWith(tTag)) {
+      return existing;
+    }
   }
-  return getUniqueClassPrefix(cls.name || "LOP", cls.id, stateObj);
+  return getUniqueClassPrefix(cls.name || "LOP", cls.id, stateObj, user, cls);
 }
 
 function isStudentCodeTaken(code, excludeStudentId = null, stateObj = appState) {
   const normalized = String(code || "").trim().toUpperCase();
   if (!normalized) return false;
-  const classes = (stateObj && Array.isArray(stateObj.classes)) ? stateObj.classes : [];
-  for (const c of classes) {
-    if (!Array.isArray(c.students)) continue;
-    for (const s of c.students) {
-      if (excludeStudentId && s.id === excludeStudentId) continue;
-      if ((s.code || "").trim().toUpperCase() === normalized || (s.username || "").trim().toUpperCase() === normalized) {
-        return true;
-      }
-    }
-  }
-  return false;
+  const { usedStudentCodes } = collectCrossAccountRegistry(null, excludeStudentId, stateObj);
+  return usedStudentCodes.has(normalized);
 }
 
-// Tự động sinh mã học sinh theo công thức: [TênViếtTắt]-[MãLớp]-[STT] (VD: BACHNH-10A1-01)
+// Tự động sinh mã học sinh theo công thức: [TênViếtTắt]-[MãLớp+MãGV]-[STT] (VD: ANNV-10A1K7M-01)
 function generateNextStudentCode(cls, offset = 0, stateObj = appState, studentName = "", excludeStudentId = null) {
   const prefix = getClassPrefix(cls, stateObj);
   const nameSlug = buildStudentNameSlug(studentName);
+  const { usedStudentCodes } = collectCrossAccountRegistry(null, excludeStudentId, stateObj);
 
   // Tìm tập hợp các số thứ tự đuôi (-01, -02...) đã dùng trong lớp này
   const usedNumbersInClass = new Set();
@@ -210,7 +333,7 @@ function generateNextStudentCode(cls, offset = 0, stateObj = appState, studentNa
   while (true) {
     const numStr = String(candidateNum).padStart(2, "0");
     const candidate = `${nameSlug}-${prefix}-${numStr}`;
-    if (!usedNumbersInClass.has(candidateNum) && !isStudentCodeTaken(candidate, excludeStudentId, stateObj)) {
+    if (!usedNumbersInClass.has(candidateNum) && !usedStudentCodes.has(candidate)) {
       if (foundCount === offset) return candidate;
       foundCount++;
     }
@@ -435,10 +558,17 @@ function sanitizeCardFrames(state) {
     const seenGlobalStudentCodes = new Set();
 
     state.classes.forEach((cls) => {
+      if (!isDemoMode && currentFirebaseUser && currentFirebaseUser.uid) {
+        cls.teacherUid = currentFirebaseUser.uid;
+      }
+      const tTag = getTeacherAccountTag(currentFirebaseUser, cls);
+      const { usedPrefixes: otherPrefixes, usedStudentCodes: otherCodes } = collectCrossAccountRegistry(cls.id, null, state);
+
       let prefix = (cls.classPrefix || "").trim().toUpperCase();
-      if (!prefix || seenClassPrefixes.has(prefix)) {
-        prefix = getUniqueClassPrefix(cls.name, cls.id, state);
-        while (seenClassPrefixes.has(prefix)) {
+      const missingTeacherTag = Boolean(tTag && !prefix.endsWith(tTag));
+      if (!prefix || missingTeacherTag || seenClassPrefixes.has(prefix) || otherPrefixes.has(prefix)) {
+        prefix = getUniqueClassPrefix(cls.name, cls.id, state, currentFirebaseUser, cls);
+        while (seenClassPrefixes.has(prefix) || otherPrefixes.has(prefix)) {
           prefix = `${prefix}X`;
         }
       }
@@ -453,9 +583,9 @@ function sanitizeCardFrames(state) {
           let num = numMatch ? parseInt(numMatch[1], 10) : idx + 1;
           if (num <= 0) num = idx + 1;
 
-          // Tự động chuẩn hóa sang công thức [TênViếtTắt]-[MãLớp]-[STT] và chống trùng tuyệt đối
+          // Tự động chuẩn hóa sang công thức [TênViếtTắt]-[MãLớp+MãGV]-[STT] và chống trùng tuyệt đối giữa mọi tài khoản
           let candidate = `${nameSlug}-${prefix}-${String(num).padStart(2, "0")}`;
-          while (usedClassNums.has(num) || seenGlobalStudentCodes.has(candidate)) {
+          while (usedClassNums.has(num) || seenGlobalStudentCodes.has(candidate) || otherCodes.has(candidate)) {
             num++;
             candidate = `${nameSlug}-${prefix}-${String(num).padStart(2, "0")}`;
           }
@@ -575,27 +705,37 @@ function saveState() {
   }
   updateNavCardCounts();
 
-  // Đồng bộ thời gian thực lên Firebase Cloud Firestore nếu đang đăng nhập online
+  // Đồng bộ thời gian thực toàn bộ các lớp của giáo viên lên Firebase Cloud Firestore
   if (firestoreDb && currentFirebaseUser && !isDemoMode) {
     firestoreDb.collection("teachers").doc(currentFirebaseUser.uid).set({
       appState,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true }).catch((err) => console.warn("Lỗi lưu dữ liệu giáo viên lên Firestore:", err));
 
-    const currentClass = getCurrentClass();
-    if (currentClass) {
-      firestoreDb.collection("shared_classes").doc(currentClass.id).set({
-        classId: currentClass.id,
-        teacherUid: currentFirebaseUser.uid,
-        className: currentClass.name,
-        students: currentClass.students || [],
-        powerCards: appState.powerCards || [],
-        penaltyCards: appState.penaltyCards || [],
-        pointLineMilestones: appState.pointLineMilestones || [],
-        isPointsHidden: Boolean(appState.isPointsHidden),
-        teacherName: currentFirebaseUser.displayName || currentFirebaseUser.email || "Giáo viên",
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true }).catch((err) => console.warn("Lỗi đồng bộ shared_classes:", err));
+    if (Array.isArray(appState.classes)) {
+      appState.classes.forEach((clsItem) => {
+        if (!clsItem || !clsItem.id) return;
+        const prefix = getClassPrefix(clsItem, appState, currentFirebaseUser);
+        cloudSharedClassesCache[clsItem.id] = {
+          classId: clsItem.id,
+          teacherUid: currentFirebaseUser.uid,
+          classPrefix: prefix,
+          students: (clsItem.students || []).map((s) => ({ id: s.id, code: String(s.code || "").trim().toUpperCase() }))
+        };
+        firestoreDb.collection("shared_classes").doc(clsItem.id).set({
+          classId: clsItem.id,
+          teacherUid: currentFirebaseUser.uid,
+          className: clsItem.name,
+          classPrefix: prefix,
+          students: clsItem.students || [],
+          powerCards: appState.powerCards || [],
+          penaltyCards: appState.penaltyCards || [],
+          pointLineMilestones: appState.pointLineMilestones || [],
+          isPointsHidden: Boolean(appState.isPointsHidden),
+          teacherName: currentFirebaseUser.displayName || currentFirebaseUser.email || "Giáo viên",
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true }).catch((err) => console.warn("Lỗi đồng bộ shared_classes:", err));
+      });
     }
   }
 }
@@ -1232,6 +1372,7 @@ async function handleSaveTeacherProfile(e) {
 async function loadTeacherDataFromFirestore(user) {
   if (!firestoreDb || !user) return;
   try {
+    await refreshCloudSharedClassesCache();
     const docRef = firestoreDb.collection("teachers").doc(user.uid);
     const snap = await docRef.get();
     if (snap.exists && snap.data()?.appState) {
@@ -4849,12 +4990,12 @@ function updateNewClassPrefixPreview() {
   const nameVal = document.getElementById("new-class-name")?.value.trim() || "";
   const prefixInput = document.getElementById("new-class-prefix");
   const sampleEl = document.getElementById("new-class-prefix-sample");
-  const suggested = getUniqueClassPrefix(nameVal || "LOP", null, appState);
+  const suggested = getUniqueClassPrefix(nameVal || "LOP", null, appState, currentFirebaseUser);
   if (prefixInput) {
     prefixInput.value = suggested;
   }
   if (sampleEl) {
-    sampleEl.textContent = `${suggested.toLowerCase()}-01`;
+    sampleEl.textContent = `annv-${suggested.toLowerCase()}-01`;
   }
 }
 
@@ -4862,15 +5003,15 @@ function openAddClassModal() {
   const nameEl = document.getElementById("new-class-name");
   const roomEl = document.getElementById("new-class-room");
   const prefixEl = document.getElementById("new-class-prefix");
+  const sampleEl = document.getElementById("new-class-prefix-sample");
   if (nameEl) nameEl.value = "";
   if (roomEl) roomEl.value = "";
+  const suggested = getUniqueClassPrefix("LOP", null, appState, currentFirebaseUser);
   if (prefixEl) {
-    prefixEl.value = getUniqueClassPrefix("LOP", null, appState);
-    prefixEl.oninput = () => {
-      const clean = prefixEl.value.trim().replace(/[^A-Za-z0-9_-]/g, "").toUpperCase();
-      const sampleEl = document.getElementById("new-class-prefix-sample");
-      if (sampleEl) sampleEl.textContent = `${(clean || "lop").toLowerCase()}-01`;
-    };
+    prefixEl.value = suggested;
+  }
+  if (sampleEl) {
+    sampleEl.textContent = `annv-${suggested.toLowerCase()}-01`;
   }
   document.getElementById("add-class-modal").classList.remove("hidden");
 }
@@ -4879,22 +5020,13 @@ function handleCreateClass(e) {
   e.preventDefault();
   const name = document.getElementById("new-class-name").value.trim();
   const room = document.getElementById("new-class-room").value.trim() || "Phòng học chính";
-  const rawPrefix = (document.getElementById("new-class-prefix")?.value || "").trim().replace(/[^A-Za-z0-9_-]/g, "").toUpperCase();
-  const desiredPrefix = rawPrefix || getUniqueClassPrefix(name, null, appState);
-
-  // Kiểm tra xem mã tiền tố lớp đã tồn tại ở lớp khác chưa
-  const duplicatePrefixClass = (appState.classes || []).find(
-    (c) => getClassPrefix(c, appState).toUpperCase() === desiredPrefix.toUpperCase()
-  );
-  if (duplicatePrefixClass) {
-    showToast(`⚠️ Mã tiền tố "${desiredPrefix}" đã được dùng cho lớp "${duplicatePrefixClass.name}"! Vui lòng đặt mã tiền tố khác (VD: ${desiredPrefix}B).`, "rose");
-    return;
-  }
-
+  // Hệ thống luôn tự động sinh mã tiền tố lớp gắn liền với mã định danh Gmail của Giáo viên để chống trùng 100%
+  const desiredPrefix = getUniqueClassPrefix(name, null, appState, currentFirebaseUser);
   const userPrefix = currentFirebaseUser ? `cls_${currentFirebaseUser.uid.slice(0, 6)}_` : "cls_demo_";
 
   const newCls = {
     id: `${userPrefix}${Date.now()}`,
+    teacherUid: currentFirebaseUser?.uid || "",
     name,
     classPrefix: desiredPrefix,
     grade: "Khối Mới",
@@ -4908,7 +5040,7 @@ function handleCreateClass(e) {
   saveState();
   renderAll();
   closeModal("add-class-modal");
-  showToast(`🏫 Đã tạo lớp "${name}" (Mã tiền tố HS: ${desiredPrefix})!`, "indigo");
+  showToast(`🏫 Đã tạo lớp "${name}" (Mã định danh: ${desiredPrefix})!`, "indigo");
 }
 
 // ----------------------------------------------------------------------------
@@ -5126,28 +5258,22 @@ function parseStudentImportText(text) {
 
   const classPrefix = getClassPrefix(cls, appState);
 
-  // Thu thập toàn bộ các mã code và số thứ tự đã tồn tại để chống trùng 100%
-  const usedCodes = new Set();
+  // Thu thập toàn bộ các mã code và số thứ tự đã tồn tại trên mọi tài khoản để chống trùng 100%
+  const { usedStudentCodes: usedCodes } = collectCrossAccountRegistry(null, null, appState);
   const usedClassNums = new Set();
   let maxClassNum = 0;
 
-  if (Array.isArray(appState.classes)) {
-    appState.classes.forEach((c) => {
-      if (Array.isArray(c.students)) {
-        c.students.forEach((s) => {
-          if (s.code) {
-            const upper = s.code.trim().toUpperCase();
-            usedCodes.add(upper);
-            if (c.id === cls.id) {
-              const m = upper.match(/-(\d+)$/);
-              if (m) {
-                const n = parseInt(m[1], 10);
-                usedClassNums.add(n);
-                if (n > maxClassNum) maxClassNum = n;
-              }
-            }
-          }
-        });
+  if (Array.isArray(cls.students)) {
+    cls.students.forEach((s) => {
+      if (s && s.code) {
+        const upper = s.code.trim().toUpperCase();
+        usedCodes.add(upper);
+        const m = upper.match(/-(\d+)$/);
+        if (m) {
+          const n = parseInt(m[1], 10);
+          usedClassNums.add(n);
+          if (n > maxClassNum) maxClassNum = n;
+        }
       }
     });
   }

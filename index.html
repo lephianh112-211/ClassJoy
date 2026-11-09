@@ -1244,10 +1244,10 @@
             class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 text-sm font-black outline-none focus:border-slate-900" />
         </div>
         <div>
-          <label class="block text-xs font-black text-slate-700 mb-1">Mã tiền tố tài khoản HS (Tự động chống trùng giữa các lớp) *</label>
-          <input id="new-class-prefix" type="text" required maxlength="10" placeholder="VD: 12A1 hoặc 12A1T"
-            class="w-full px-3.5 py-2.5 rounded-xl border-2 border-indigo-300 bg-indigo-50/50 text-sm font-black uppercase text-indigo-950 outline-none focus:border-slate-900" />
-          <p class="text-[11px] font-bold text-slate-500 mt-1">Dùng để sinh mã HS không trùng lặp (VD: <span id="new-class-prefix-sample" class="font-black text-indigo-700">12a1-01</span>, <span class="font-black text-indigo-700">-02</span>...)</p>
+          <label class="block text-xs font-black text-slate-700 mb-1">Mã định danh lớp & Giáo viên (Hệ thống tự động tạo độc nhất) 🔒</label>
+          <input id="new-class-prefix" type="text" readonly
+            class="w-full px-3.5 py-2.5 rounded-xl border-2 border-indigo-300 bg-indigo-50/80 text-sm font-black uppercase text-indigo-950 outline-none cursor-not-allowed select-all" />
+          <p class="text-[11px] font-bold text-slate-500 mt-1">Gắn mã riêng của từng Gmail Giáo viên để chống trùng 100% (VD: <span id="new-class-prefix-sample" class="font-black text-indigo-700">annv-10a1k7m-01</span>)</p>
         </div>
         <div>
           <label class="block text-xs font-black text-slate-700 mb-1">Phòng học / Ghi chú</label>
