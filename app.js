@@ -1408,13 +1408,7 @@ function updateTeacherInfoUI(name, email, photoUrl) {
     infoBar.textContent = `${name || "Giáo viên"} • ${email || "ClassJoy Online"}`;
   }
   if (cloudBadge) {
-    if (isDemoMode) {
-      cloudBadge.className = "text-[10px] font-black px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-300";
-      cloudBadge.textContent = "⚡ Chế độ Demo (Offline)";
-    } else {
-      cloudBadge.className = "text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300";
-      cloudBadge.textContent = "☁️ Firebase Đã Kết Nối";
-    }
+    cloudBadge.classList.add("hidden");
   }
 }
 
@@ -2616,7 +2610,7 @@ function setRankingPeriod(period) {
         "px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition bg-amber-400 text-slate-950 border-2 border-slate-900 shadow-[0_2px_0_#1e293b]";
     } else {
       btn.className =
-        "px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition text-slate-600 hover:text-slate-900";
+        "px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition border-2 border-transparent text-slate-600 hover:text-slate-900";
     }
   });
   renderRankingTab();
@@ -2708,21 +2702,21 @@ function renderRankingTab() {
     .map(
       (st, idx) => `
       <div onclick="openStudentDetailModal('${st.id}')"
-        class="cursor-pointer rounded-3xl p-5 border-2 ${podiumBgs[idx]} shadow-[0_6px_0_#1e293b] flex items-center justify-between gap-4 hover:-translate-y-1 transition">
-        <div class="flex items-center gap-3.5 min-w-0">
+        class="h-full cursor-pointer rounded-3xl p-5 border-2 ${podiumBgs[idx]} shadow-[0_6px_0_#1e293b] flex items-center justify-between gap-4 hover:-translate-y-1 transition">
+        <div class="flex items-center gap-3.5 min-w-0 flex-1">
           <div class="avatar-sticker w-16 h-16 rounded-2xl bg-white border-2 border-slate-900 flex items-center justify-center text-4xl shrink-0">
             ${st.avatar}
           </div>
-          <div class="min-w-0">
-            <span class="px-2.5 py-0.5 rounded-full bg-slate-900 text-white font-black text-[10px] uppercase">
+          <div class="min-w-0 flex-1">
+            <span class="inline-block px-2.5 py-0.5 rounded-full bg-slate-900 text-white font-black text-[10px] uppercase">
               ${medals[idx]}
             </span>
             <h4 class="font-black text-slate-900 text-base truncate mt-1">${st.name}</h4>
-            <p class="text-xs font-bold text-slate-700">${st.code} • ${st.group}</p>
+            <p class="text-xs font-bold text-slate-700 truncate mt-0.5">${(st.username || st.code || "").toLowerCase()} • ${st.group}</p>
           </div>
         </div>
-        <div class="text-right bg-white px-3.5 py-2 rounded-2xl border-2 border-slate-900 shadow-[0_2px_0_#1e293b] shrink-0">
-          <div class="text-[10px] font-black uppercase text-slate-400">
+        <div class="text-center bg-white px-3.5 py-2 rounded-2xl border-2 border-slate-900 shadow-[0_2px_0_#1e293b] shrink-0 min-w-[92px]">
+          <div class="text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">
             ${currentRankingPeriod === "week" ? "Tăng tuần" : currentRankingPeriod === "month" ? "Tăng tháng" : "Tổng điểm"}
           </div>
           <div class="text-xl font-black ${st.activeScore < 0 ? "text-rose-600" : "text-emerald-600"}">
@@ -2932,7 +2926,6 @@ function renderStudentDetailModalContent(studentId) {
         </div>
         <div>
           <div class="flex flex-wrap items-center gap-2">
-            <span class="px-2.5 py-0.5 rounded-lg bg-amber-300 text-slate-900 font-black text-xs border border-slate-800">Mã HS: ${student.code}</span>
             <span class="px-2.5 py-0.5 rounded-lg bg-indigo-100 text-indigo-900 font-black text-xs border border-indigo-300">👤 TK: ${studentUsername}</span>
             <span class="text-xs font-bold text-slate-500">${classObj.name} • ${student.group}</span>
           </div>
@@ -3058,8 +3051,13 @@ function renderStudentDetailModalContent(studentId) {
             </select>
           </div>
 
-          <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-            <button onclick="grantCardToStudent('${student.id}', 'power')"
+          <div class="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <button onclick="grantCardToStudent('${student.id}', 'power', 'used')"
+              class="pop-btn pop-btn-white px-3 py-2 rounded-xl text-[11px] font-black text-slate-700"
+              title="Thêm thẳng thẻ này vào danh sách Đã sử dụng">
+              + Thêm vào Đã sử dụng
+            </button>
+            <button onclick="grantCardToStudent('${student.id}', 'power', 'unused')"
               class="pop-btn pop-btn-yellow px-4 py-2 rounded-xl text-xs font-black">
               🎁 Trao Thẻ Power Card
             </button>
@@ -3084,8 +3082,13 @@ function renderStudentDetailModalContent(studentId) {
             </select>
           </div>
 
-          <div class="flex items-center justify-end pt-2 border-t border-slate-100">
-            <button onclick="grantCardToStudent('${student.id}', 'penalty', false)"
+          <div class="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <button onclick="grantCardToStudent('${student.id}', 'penalty', 'used')"
+              class="pop-btn pop-btn-white px-3 py-2 rounded-xl text-[11px] font-black text-slate-700"
+              title="Ghi nhận thẳng thử thách này vào danh sách Đã hoàn thành">
+              + Thêm vào Đã hoàn thành
+            </button>
+            <button onclick="grantCardToStudent('${student.id}', 'penalty', 'unused')"
               class="pop-btn pop-btn-violet px-4 py-2 rounded-xl text-xs font-black">
               🎯 Gửi Thử Thách
             </button>
@@ -3138,12 +3141,19 @@ function renderStudentDetailModalContent(studentId) {
                           </div>
                           <div class="pt-2 border-t border-slate-200/80 flex flex-wrap items-center justify-between gap-2">
                             <span class="text-[11px] font-bold text-slate-500">Cấp lúc: ${inst.acquiredAt}</span>
-                            <button onclick="markCardAsUsed('${student.id}', '${inst.instanceId}')"
-                              class="pop-btn ${
-                                isPower ? "pop-btn-blue" : "pop-btn-green"
-                              } px-3.5 py-1.5 rounded-xl text-xs font-black">
-                              ${isPower ? "✅ Xác nhận Dùng Thẻ (Khóa)" : "✅ Đã xong thử thách (Khóa)"}
-                            </button>
+                            <div class="flex flex-wrap items-center gap-1.5">
+                              <button onclick="markCardAsUsed('${student.id}', '${inst.instanceId}')"
+                                class="pop-btn ${
+                                  isPower ? "pop-btn-blue" : "pop-btn-green"
+                                } px-3 py-1.5 rounded-xl text-xs font-black">
+                                ${isPower ? "✅ Xác nhận Đã sử dụng" : "✅ Đã hoàn thành thử thách"}
+                              </button>
+                              <button onclick="deleteOwnedCardInstance('${student.id}', '${inst.instanceId}')"
+                                class="pop-btn pop-btn-coral px-2.5 py-1.5 rounded-xl text-xs font-black"
+                                title="Xóa thẻ này (nếu cấp nhầm)">
+                                🗑️
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -3158,9 +3168,9 @@ function renderStudentDetailModalContent(studentId) {
         <div class="flex items-center justify-between mb-3">
           <h4 class="text-sm font-black text-slate-900 flex items-center gap-2">
             <span class="w-3 h-3 rounded-full bg-slate-400 border border-slate-900"></span>
-            Thẻ ĐÃ DÙNG / ĐÃ HOÀN THÀNH (${usedCards.length})
+            Thẻ ĐÃ SỬ DỤNG / ĐÃ HOÀN THÀNH (${usedCards.length})
           </h4>
-          <span class="text-[11px] font-black text-slate-600 bg-slate-100 border border-slate-300 px-2 py-0.5 rounded-lg">Đã khóa vĩnh viễn</span>
+          <span class="text-[11px] font-black text-slate-600 bg-slate-100 border border-slate-300 px-2 py-0.5 rounded-lg">Có thể hoàn tác / xóa</span>
         </div>
 
         <div class="space-y-4">
@@ -3173,22 +3183,43 @@ function renderStudentDetailModalContent(studentId) {
                   .map((inst) => {
                     const tpl = findCardTemplate(inst.cardId, inst.type);
                     if (!tpl) return "";
+                    const isPower = inst.type === "power";
                     return `
-                      <div class="relative p-4 rounded-3xl border-2 border-slate-300 bg-slate-100 flex flex-col sm:flex-row items-center gap-4 shadow-sm opacity-80">
+                      <div class="relative p-4 rounded-3xl border-2 ${
+                        isPower ? "border-slate-300 bg-slate-100 opacity-85" : "border-violet-300 bg-violet-50/60"
+                      } flex flex-col sm:flex-row items-center gap-4 shadow-sm">
                         <div class="shrink-0 flex justify-center">
                           ${renderVisualArtCard(tpl, "used", { maxWidth: "145px", type: inst.type })}
                         </div>
                         <div class="flex-1 flex flex-col justify-between h-full w-full gap-2 text-left">
                           <div>
-                            <span class="text-[10px] font-black uppercase px-2.5 py-0.5 rounded bg-slate-300 text-slate-700">
-                              🔒 ĐÃ SỬ DỤNG / HOÀN THÀNH
+                            <span class="text-[10px] font-black uppercase px-2.5 py-0.5 rounded ${
+                              isPower ? "bg-slate-300 text-slate-700" : "bg-violet-200 text-violet-950 border border-violet-400"
+                            }">
+                              ${isPower ? "🔒 ĐÃ SỬ DỤNG" : "🎯 THỬ THÁCH ĐÃ HOÀN THÀNH"}
                             </span>
-                            <h5 class="font-black text-slate-700 line-through text-base mt-1">${tpl.title}</h5>
+                            <h5 class="font-black ${
+                              isPower ? "text-slate-700 line-through" : "text-slate-900"
+                            } text-base mt-1">${tpl.title}</h5>
                             <p class="text-xs font-bold text-slate-500 mt-0.5 leading-relaxed">${tpl.description}</p>
                           </div>
-                          <div class="pt-2 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500 font-bold">
-                            <span>Cấp lúc: ${inst.acquiredAt}</span>
-                            <span class="text-slate-800 font-black">Đã khóa: ${inst.usedAt || "Xong"}</span>
+                          <div class="pt-2 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 font-bold">
+                            <div>
+                              <div>Cấp lúc: ${inst.acquiredAt}</div>
+                              <div class="text-slate-800 font-black">${isPower ? "Đã sử dụng:" : "Hoàn thành:"} ${inst.usedAt || "Xong"}</div>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                              <button type="button" onclick="restoreCardToUnused('${student.id}', '${inst.instanceId}')"
+                                class="pop-btn pop-btn-white px-2.5 py-1 rounded-xl text-[11px] font-black text-indigo-700"
+                                title="Chuyển thẻ này về lại danh sách Chưa dùng (nếu bấm nhầm)">
+                                ↩️ Chuyển về Chưa dùng
+                              </button>
+                              <button type="button" onclick="deleteOwnedCardInstance('${student.id}', '${inst.instanceId}')"
+                                class="pop-btn pop-btn-coral px-2.5 py-1 rounded-xl text-[11px] font-black"
+                                title="Xóa thẻ này khỏi danh sách">
+                                🗑️ Xóa
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -3202,7 +3233,7 @@ function renderStudentDetailModalContent(studentId) {
   `;
 }
 
-function grantCardToStudent(studentId, type) {
+function grantCardToStudent(studentId, type, initialStatus = "unused") {
   const found = findStudentById(studentId);
   if (!found) return;
   const { student } = found;
@@ -3213,7 +3244,10 @@ function grantCardToStudent(studentId, type) {
   const tpl = findCardTemplate(cardId, type);
   if (!tpl) return;
 
-  if (type === "penalty" && tpl.id === "pen-2") {
+  const isDirectUsed = initialStatus === "used";
+  const nowStr = nowTimeString();
+
+  if (type === "penalty" && tpl.id === "pen-2" && !isDirectUsed) {
     student.points = Math.max(0, student.points - 3);
   }
 
@@ -3221,16 +3255,18 @@ function grantCardToStudent(studentId, type) {
     instanceId: "inst-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
     cardId: tpl.id,
     type,
-    status: "unused",
-    acquiredAt: nowTimeString(),
-    usedAt: null,
+    status: isDirectUsed ? "used" : "unused",
+    acquiredAt: nowStr,
+    usedAt: isDirectUsed ? nowStr : null,
     note: type === "power" ? "Thưởng đạt mốc Point Line / Giáo viên trao" : "Giáo viên giao trên lớp"
   });
 
   student.history.unshift({
-    time: nowTimeString(),
+    time: nowStr,
     daysAgo: 0,
-    text: `${type === "power" ? "Nhận Power Card" : "Nhận Challenge Card"}: ${tpl.title}`,
+    text: isDirectUsed
+      ? `Thêm vào danh sách Đã sử dụng/Hoàn thành: ${tpl.title}`
+      : `${type === "power" ? "Nhận Power Card" : "Nhận Challenge Card"}: ${tpl.title}`,
     delta: 0
   });
 
@@ -3238,7 +3274,9 @@ function grantCardToStudent(studentId, type) {
   renderAll();
   renderStudentDetailModalContent(studentId);
   showToast(
-    `${tpl.icon} Đã cấp thẻ "${tpl.title}" cho ${student.name}!`,
+    isDirectUsed
+      ? `✅ Đã thêm thẻ "${tpl.title}" vào danh sách Đã sử dụng / Hoàn thành của ${student.name}!`
+      : `${tpl.icon} Đã cấp thẻ "${tpl.title}" cho ${student.name}!`,
     type === "power" ? "indigo" : "amber"
   );
 }
@@ -3252,7 +3290,7 @@ function markCardAsUsed(studentId, instanceId) {
   if (!cardInst) return;
 
   if (cardInst.status === "used") {
-    showToast("🔒 Thẻ này đã được sử dụng hoặc hoàn thành trước đó!", "rose");
+    showToast("Thẻ này đã nằm trong danh sách Đã sử dụng / Hoàn thành!", "rose");
     return;
   }
 
@@ -3265,7 +3303,7 @@ function markCardAsUsed(studentId, instanceId) {
   student.history.unshift({
     time: cardInst.usedAt,
     daysAgo: 0,
-    text: `Đã sử dụng & khóa thẻ: ${cardTitle}`,
+    text: `${cardInst.type === "power" ? "Đã sử dụng Power Card" : "Đã hoàn thành Challenge Card"}: ${cardTitle}`,
     delta: 0
   });
 
@@ -3274,7 +3312,63 @@ function markCardAsUsed(studentId, instanceId) {
   if (activeStudentModalId === studentId) {
     renderStudentDetailModalContent(studentId);
   }
-  showToast(`🔒 Đã xác nhận hoàn thành thẻ "${cardTitle}"! Thẻ đã bị khóa vĩnh viễn.`, "indigo");
+  showToast(`✅ Đã chuyển thẻ "${cardTitle}" sang danh sách Đã sử dụng / Hoàn thành!`, "indigo");
+}
+
+function restoreCardToUnused(studentId, instanceId) {
+  const found = findStudentById(studentId);
+  if (!found) return;
+  const { student } = found;
+
+  const cardInst = student.ownedCards.find((c) => c.instanceId === instanceId);
+  if (!cardInst) return;
+
+  const tpl = findCardTemplate(cardInst.cardId, cardInst.type);
+  const cardTitle = tpl ? tpl.title : "Thẻ bài";
+
+  cardInst.status = "unused";
+  cardInst.usedAt = null;
+
+  student.history.unshift({
+    time: nowTimeString(),
+    daysAgo: 0,
+    text: `Hoàn tác thẻ về Chưa dùng: ${cardTitle}`,
+    delta: 0
+  });
+
+  saveState();
+  renderAll();
+  if (activeStudentModalId === studentId) {
+    renderStudentDetailModalContent(studentId);
+  }
+  showToast(`↩️ Đã chuyển thẻ "${cardTitle}" về lại danh sách Chưa dùng!`, "emerald");
+}
+
+function deleteOwnedCardInstance(studentId, instanceId) {
+  const found = findStudentById(studentId);
+  if (!found) return;
+  const { student } = found;
+
+  const cardInst = student.ownedCards.find((c) => c.instanceId === instanceId);
+  if (!cardInst) return;
+
+  const tpl = findCardTemplate(cardInst.cardId, cardInst.type);
+  const cardTitle = tpl ? tpl.title : "Thẻ bài";
+
+  student.ownedCards = student.ownedCards.filter((c) => c.instanceId !== instanceId);
+  student.history.unshift({
+    time: nowTimeString(),
+    daysAgo: 0,
+    text: `Xóa thẻ khỏi túi thẻ: ${cardTitle}`,
+    delta: 0
+  });
+
+  saveState();
+  renderAll();
+  if (activeStudentModalId === studentId) {
+    renderStudentDetailModalContent(studentId);
+  }
+  showToast(`🗑️ Đã xóa thẻ "${cardTitle}" khỏi danh sách của ${student.name}!`, "slate");
 }
 
 // ----------------------------------------------------------------------------
@@ -3837,11 +3931,12 @@ function renderVisualArtCard(card, state = "unused", options = {}) {
   const categoryLabel = card.category || normalizeCardCategory("", cardTypeKey, 0);
   const shortCatLabel = categoryLabel.replace(/^Nhóm\s+/i, "");
   const maxWidth = options.maxWidth || "230px";
-  const showStamp = isUsed;
+  // Chỉ đóng dấu "ĐÃ SỬ DỤNG" lên thẻ Power Card; thẻ Challenge Card có thể nhận nhiều lần nên không đóng dấu khóa
+  const showStamp = isUsed && isPower;
   const isCompact = parseInt(maxWidth, 10) < 180;
   
   return `
-    <div class="custom-art-card ${isUsed ? 'opacity-70 grayscale-[0.25]' : ''}" 
+    <div class="custom-art-card ${showStamp ? 'opacity-70 grayscale-[0.25]' : ''}" 
          style="background-image: url('${cleanFrame}'), url('Card/${cleanFrame}'); max-width: ${maxWidth};">
       
       <!-- Top header bar: Mã code & Nhãn phân loại nhóm thẻ -->
@@ -3868,13 +3963,13 @@ function renderVisualArtCard(card, state = "unused", options = {}) {
 
       <!-- Bottom footer bar -->
       <div class="flex items-center justify-between gap-1 z-10 w-full pt-1 mt-auto">
-        <span class="text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${isUsed ? 'bg-slate-700 text-slate-200' : (isPower ? 'bg-amber-400 text-slate-900' : 'bg-violet-400 text-slate-900')} border border-slate-900">
-          ${isUsed ? '🔒 ĐÃ DÙNG' : (isPower ? '⚡ POWER CARD' : '🎯 CHALLENGE')}
+        <span class="text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${showStamp ? 'bg-slate-700 text-slate-200' : (isPower ? 'bg-amber-400 text-slate-900' : 'bg-violet-400 text-slate-900')} border border-slate-900">
+          ${showStamp ? '🔒 ĐÃ SỬ DỤNG' : (isPower ? '⚡ POWER CARD' : '🎯 CHALLENGE')}
         </span>
         <span class="text-[8px] sm:text-[9px] font-black text-slate-800 bg-white/85 px-1.5 py-0.5 rounded border border-slate-700">ClassJoy</span>
       </div>
 
-      ${showStamp ? '<div class="used-stamp" style="font-size: 13px; padding: 3px 10px;">ĐÃ SỬ DÙNG</div>' : ''}
+      ${showStamp ? '<div class="used-stamp" style="font-size: 13px; padding: 3px 10px;">ĐÃ SỬ DỤNG</div>' : ''}
     </div>
   `;
 }
@@ -4649,7 +4744,6 @@ function renderStudentPortalProfileHtml(student, classObj) {
         <div>
           <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
             <span class="px-3 py-1 rounded-full bg-slate-900 text-white font-black text-xs">👤 TK: ${studentUsername}</span>
-            <span class="px-3 py-1 rounded-full bg-white border-2 border-slate-900 text-slate-900 font-black text-xs shadow-[0_2px_0_#1e293b]">MÃ HS: ${student.code}</span>
             <span class="px-3 py-1 rounded-full bg-emerald-100 border-2 border-slate-900 text-emerald-950 font-black text-xs">${classObj.name} • ${student.group}</span>
           </div>
           <h3 class="text-2xl sm:text-3xl font-black">${student.name}</h3>
@@ -4760,14 +4854,15 @@ function renderStudentPortalProfileHtml(student, classObj) {
                 .map((inst) => {
                   const tpl = findCardTemplate(inst.cardId, inst.type);
                   if (!tpl) return "";
+                  const isPower = inst.type === "power";
                   return `
-                    <div class="bg-slate-100 rounded-3xl p-5 border-2 border-slate-300 shadow-sm flex flex-col items-center justify-between gap-3 opacity-80">
+                    <div class="${isPower ? 'bg-slate-100 border-slate-300 opacity-85' : 'bg-violet-50/70 border-violet-300'} rounded-3xl p-5 border-2 shadow-sm flex flex-col items-center justify-between gap-3">
                       <div class="w-full flex justify-center py-1">
                         ${renderVisualArtCard(tpl, "used", { maxWidth: "205px", type: inst.type })}
                       </div>
                       <div class="w-full pt-3 border-t-2 border-slate-200 text-center space-y-1">
                         <div class="text-[11px] font-bold text-slate-500">Nhận: ${inst.acquiredAt}</div>
-                        <div class="text-[11px] font-black text-slate-700">Đã khóa lúc: ${inst.usedAt || "Đã dùng"}</div>
+                        <div class="text-[11px] font-black ${isPower ? 'text-slate-700' : 'text-violet-900'}">${isPower ? 'Đã sử dụng lúc:' : 'Hoàn thành lúc:'} ${inst.usedAt || "Đã xong"}</div>
                       </div>
                     </div>
                   `;
