@@ -1326,6 +1326,28 @@ function setAuthMode(mode) {
   // Đã khóa đăng nhập/đăng ký bằng Email & Mật khẩu tự lập để bảo mật
 }
 
+let activeTeacherLoginPromise = null;
+
+async function completeTeacherLogin(user) {
+  if (!user) return;
+  currentFirebaseUser = user;
+  isDemoMode = false;
+  currentAppRole = "teacher";
+  updateTeacherInfoUI(user.displayName, user.email, user.photoURL);
+
+  if (!activeTeacherLoginPromise) {
+    activeTeacherLoginPromise = (async () => {
+      try {
+        await loadTeacherDataFromFirestore(user);
+      } finally {
+        activeTeacherLoginPromise = null;
+      }
+    })();
+  }
+  await activeTeacherLoginPromise;
+  enterMainApp("teacher");
+}
+
 async function loginWithGoogle() {
   const errBox = document.getElementById("login-error");
   if (errBox) errBox.classList.add("hidden");
@@ -1339,8 +1361,14 @@ async function loginWithGoogle() {
   provider.setCustomParameters({ prompt: "select_account" });
   try {
     const result = await firebaseAuth.signInWithPopup(provider);
-    showToast(`👋 Xin chào ${result.user.displayName || result.user.email}!`, "emerald");
+    if (result && result.user) {
+      await completeTeacherLogin(result.user);
+      showToast(`👋 Xin chào ${result.user.displayName || result.user.email}!`, "emerald");
+    }
   } catch (error) {
+    if (error && (error.code === "auth/cancelled-popup-request" || error.code === "auth/popup-closed-by-user")) {
+      return;
+    }
     console.error("Google Sign-In Error:", error);
     if (errBox) {
       errBox.textContent = "Lỗi đăng nhập Google: " + (error.message || error);
@@ -1361,7 +1389,8 @@ async function logoutTeacher() {
     studentPortalLiveUnsub = null;
     studentPortalLiveClassId = null;
   }
-  if (firebaseAuth && firebaseAuth.currentUser) {
+  activeTeacherLoginPromise = null;
+  if (firebaseAuth) {
     try {
       await firebaseAuth.signOut();
     } catch (e) {
@@ -1370,6 +1399,7 @@ async function logoutTeacher() {
   }
   currentFirebaseUser = null;
   isDemoMode = false;
+  currentAppRole = "teacher";
 
   // Nạp lại trạng thái từ bộ nhớ lưu trữ (giữ nguyên mật khẩu học sinh đã đổi)
   appState = loadState(null);
@@ -1468,9 +1498,12 @@ async function handleSaveTeacherProfile(e) {
 async function loadTeacherDataFromFirestore(user) {
   if (!firestoreDb || !user) return;
   try {
-    await refreshCloudSharedClassesCache();
+    currentAppRole = "teacher";
     const docRef = firestoreDb.collection("teachers").doc(user.uid);
-    const snap = await docRef.get();
+    const [, snap] = await Promise.all([
+      refreshCloudSharedClassesCache(),
+      docRef.get()
+    ]);
     if (snap.exists && snap.data()?.appState) {
       appState = snap.data().appState;
       ensureUniqueClassIds(appState, user);
@@ -1584,11 +1617,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (firebaseAuth) {
     firebaseAuth.onAuthStateChanged(async (user) => {
       if (user) {
-        currentFirebaseUser = user;
-        isDemoMode = false;
-        updateTeacherInfoUI(user.displayName, user.email, user.photoURL);
-        await loadTeacherDataFromFirestore(user);
-        enterMainApp("teacher");
+        await completeTeacherLogin(user);
       }
     });
   }
